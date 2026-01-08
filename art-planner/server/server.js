@@ -12,7 +12,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 const fs = require('fs');
-const path = require('path');
+
 
 // Список необхідних папок для роботи AI Instructor та Multer
 const directories = ['uploads', 'results'];
