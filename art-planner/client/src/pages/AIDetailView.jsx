@@ -5,7 +5,7 @@ import API from '../api/axiosConfig';
 
 const AIDetailView = () => {
     const { id } = useParams();
-    const navigate = useNavigate();
+    //const navigate = useNavigate();
     const [art, setArt] = useState(null);
     const [userPrompt, setUserPrompt] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, FileText, ArrowLeft, Download } from 'lucide-react';
+import { Folder, FileText, ArrowLeft } from 'lucide-react';
 import API from '../api/axiosConfig';
 
 const GalleryPage = () => {
