@@ -11,27 +11,27 @@ function App() {
     const userName = localStorage.getItem('username') || 'Artist';
 
     const handleExit = () => {
-        localStorage.clear(); // Очищує localStorage при виході
+        localStorage.clear(); // Очищення localStorage при виході
         window.location.href = '/login'; // Редирект на логін
     };
 
     return (
         <Router>
             <div className="min-h-screen flex flex-col bg-[--color-primary]">
-                {/* Навігація (Header) згідно з вашим дизайном */}
                 <header className="p-4 border-b-2 border-[--color-dark] flex justify-between items-center bg-[--color-secondary]/30">
                     <h1 className="text-xl font-bold italic text-[--color-deep]">Welcome, {userName}</h1>
                     <nav className="flex gap-6 font-bold">
-                        <Link to="/login" className="text-[--color-deep] hover:underline">Login</Link>
                         <Link to="/planner" className="text-[--color-deep] hover:underline">Planer</Link>
                         <Link to="/gallery" className="text-[--color-deep] hover:underline">AI instructor</Link>
-                        {isAuthenticated && (
+                        {isAuthenticated ? (
                             <button onClick={handleExit} className="text-[--color-dark] cursor-pointer font-bold">Exit</button>
+                        ) : (
+                            <Link to="/login" className="text-[--color-deep] hover:underline">Login</Link>
                         )}
                     </nav>
                 </header>
 
-                <main className="flex-grow">
+                <main className="flex-grow p-4">
                     <Routes>
                         <Route path="/login" element={<AuthPage />} />
                         <Route path="/planner" element={isAuthenticated ? <PlannerPage /> : <Navigate to="/login" />} />
