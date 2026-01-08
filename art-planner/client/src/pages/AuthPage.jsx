@@ -21,7 +21,10 @@ const AuthPage = () => {
                 setIsLogin(true);
             }
         } catch (err) {
-            alert("Auth error: " + err.response?.data?.message);
+            // Якщо err.response немає, виводимо загальну помилку мережі
+            const errorMessage = err.response?.data?.message || err.message || "Connection to server failed";
+            alert("Auth error: " + errorMessage);
+            console.error("Full error object:", err);
         }
     };
 

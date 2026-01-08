@@ -11,6 +11,13 @@
     --font-hand: "Comic Sans MS", "Cursive", sans-serif;
 }
 
+:root {
+    --color-primary: #F4DBD8;
+    --color-secondary: #BEA8A7;
+    --color-accent: #C09891;
+    --color-dark: #775144;
+    --color-deep: #2A0800;
+}
 @layer base {
     body {
         @apply bg-[--color-primary] text-[--color-deep] font-[--font-hand];
@@ -24,7 +31,7 @@
 }
 
 .hand-drawn-card {
-    @apply bg-[--color-secondary] border-[--border-thick] border-[--color-dark] shadow-[5px_5px_0px_#2A0800];
+    @apply bg-[--color-secondary] border-[--color-dark] shadow-[5px_5px_0px_#2A0800];
     border-radius: 8px 12px 6px 14px;
 }
 
