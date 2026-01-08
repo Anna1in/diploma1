@@ -11,7 +11,19 @@ const { User, Task, Art } = require('./models/Schemas');
 const app = express();
 app.use(express.json());
 app.use(cors());
+const fs = require('fs');
+const path = require('path');
 
+// Список необхідних папок для роботи AI Instructor та Multer
+const directories = ['uploads', 'results'];
+
+directories.forEach(dir => {
+    const dirPath = path.join(__dirname, dir);
+    if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+        console.log(`Папка створена: ${dir}`);
+    }
+});
 // Статичні папки для зображень
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/results', express.static(path.join(__dirname, 'results')));

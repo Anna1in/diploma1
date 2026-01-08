@@ -37,7 +37,7 @@ const PlannerPage = () => {
     // --- ЛОГІКА ОБЧИСЛЕННЯ ПРОГРЕСУ ---
 
     const getProgress = (category) => {
-        let filteredTasks = [];
+        let filteredTasks;
 
         if (category === 'year') {
             // Річний прогрес: сума ВСІХ завдань за поточний календарний рік
