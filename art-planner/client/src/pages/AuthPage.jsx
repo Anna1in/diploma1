@@ -1,9 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
-import AuthPage from './pages/AuthPage.jsx';
-import PlannerPage from './pages/PlannerPage.jsx';
-import GalleryPage from './pages/GalleryPage.jsx';
-import AIDetailView from './pages/AIDetailView.jsx';
+import AuthPage from 'AuthPage.jsx';
+import PlannerPage from 'PlannerPage.jsx';
+import GalleryPage from 'GalleryPage.jsx';
+import AIDetailView from 'AIDetailView.jsx';
 import './App.css';
 
 function App() {
