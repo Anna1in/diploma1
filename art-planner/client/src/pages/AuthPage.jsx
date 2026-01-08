@@ -1,6 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
-import AuthPage from 'AuthPage.jsx';
 import PlannerPage from 'PlannerPage.jsx';
 import GalleryPage from 'GalleryPage.jsx';
 import AIDetailView from 'AIDetailView.jsx';
