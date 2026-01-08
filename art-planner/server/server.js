@@ -17,9 +17,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/results', express.static(path.join(__dirname, 'results')));
 const uri = process.env.MONGODB_URI;
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log("Connected to MongoDB Atlas"))
-    .catch(err => console.error("DB Connection Error:", err));
+mongoose.connect(uri)
+    .then(() => console.log("БД підключено успішно!"))
+    .catch(err => console.log("DB Connection Error:", err));
 
 // --- AUTH LOGIC ---
 
