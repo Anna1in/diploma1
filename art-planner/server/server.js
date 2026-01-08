@@ -15,7 +15,7 @@ app.use(cors());
 // Статичні папки для зображень
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/results', express.static(path.join(__dirname, 'results')));
-
+const uri = process.env.MONGODB_URI;
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log("Connected to MongoDB Atlas"))
