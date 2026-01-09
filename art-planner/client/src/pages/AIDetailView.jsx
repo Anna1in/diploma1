@@ -65,7 +65,7 @@ const AIDetailView = () => {
 
             <div className="flex flex-col lg:flex-row gap-6 flex-grow overflow-hidden">
                 {/* Ліва частина: Перегляд зображення (Фото 7) */}
-                <div className="lg:w-2/3 bg-[--color-bg-deep] rounded-lg border-4 border-[--color-dark] relative flex items-center justify-center overflow-hidden">
+                <div className="lg:w-2/3 bg-deep rounded-lg border-4 border-[--color-dark] relative flex items-center justify-center overflow-hidden">
                     <button className="absolute left-4 z-10 p-2 bg-[--color-secondary]/50 rounded-md hover:bg-[--color-secondary]">
                         <ChevronLeft size={40} />
                     </button>
