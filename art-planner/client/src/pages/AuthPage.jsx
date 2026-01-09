@@ -12,19 +12,21 @@ const AuthPage = () => {
         try {
             const endpoint = isLogin ? '/login' : '/register';
             const res = await API.post(endpoint, formData);
+
             if (isLogin) {
                 localStorage.setItem('token', res.data.token);
-                localStorage.setItem('userId', res.data.userId); // Збереження userId
+                localStorage.setItem('userId', res.data.userId); //
                 localStorage.setItem('username', res.data.username);
                 navigate('/planner');
             } else {
                 setIsLogin(true);
+                alert("Registration successful! Please Log In.");
             }
         } catch (err) {
-            // Якщо err.response немає, виводимо загальну помилку мережі
-            const errorMessage = err.response?.data?.message || err.message || "Connection to server failed";
-            alert("Auth error: " + errorMessage);
-            console.error("Full error object:", err);
+            // Виправляємо помилку undefined [cite: 4]
+            const message = err.response?.data?.message || err.message || "Server is waking up, please try again in 30s";
+            alert("Auth error: " + message);
+            console.error(err);
         }
     };
 

@@ -11,13 +11,7 @@
     --font-hand: "Comic Sans MS", "Cursive", sans-serif;
 }
 
-:root {
-    --color-primary: #F4DBD8;
-    --color-secondary: #BEA8A7;
-    --color-accent: #C09891;
-    --color-dark: #775144;
-    --color-deep: #2A0800;
-}
+
 @layer base {
     body {
         @apply bg-[--color-primary] text-[--color-deep] font-[--font-hand];
@@ -41,4 +35,11 @@
 
 .progress-bar-fill {
     @apply h-full bg-[--color-dark] transition-all duration-500;
+}
+:root {
+    --color-primary: #F4DBD8;
+    --color-secondary: #BEA8A7;
+    --color-accent: #C09891;
+    --color-dark: #775144;
+    --color-deep: #2A0800;
 }
