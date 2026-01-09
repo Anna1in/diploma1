@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/axiosConfig';
 
-const AuthPage = () => {
+
+const AuthPage = ({ onLogin }) => {
     const [isSignUp, setIsSignUp] = useState(true);
     const [formData, setFormData] = useState({ username: '', email: '', password: '' });
     const [error, setError] = useState('');
@@ -21,6 +22,9 @@ const AuthPage = () => {
                 localStorage.setItem('token', response.data.token);
                 localStorage.setItem('userId', response.data.userId);
                 localStorage.setItem('username', response.data.username);
+                if (onLogin) {
+                    onLogin();
+                }
                 navigate('/planner');
             } else {
                 setIsSignUp(false);
@@ -30,6 +34,7 @@ const AuthPage = () => {
             // Обробка помилки 500 (сервер) або 401 (пароль)
             const message = err.response?.data?.message || err.message || "Помилка з'єднання з сервером";
             setError(message);
+            alert("Auth error: " + message);
         }
     };
 
