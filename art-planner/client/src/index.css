@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+    --color-primary: #F4DBD8;     /* Світло-рожевий */
+    --color-secondary: #BEA8A7;   /* Попеляста троянда */
+    --color-accent: #C09891;      /* Коричнево-бежевий */
+    --color-dark: #775144;        /* Насичений коричневий */
+    --color-deep: #2A0800;        /* Темний шоколад */
+
+    --border-thick: 3px;
+    --font-hand: "Comic Sans MS", "Cursive", sans-serif;
+}
+
+
+@layer base {
+    body {
+        @apply bg-[--color-primary] text-[--color-deep] font-[--font-hand];
+    }
+}
+
+/* Кастомні класи для ефекту "від руки" */
+.hand-drawn-border {
+    border: var(--border-thick) solid var(--color-dark);
+    border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
+
+.hand-drawn-card {
+    @apply bg-[--color-secondary] border-[--color-dark] shadow-[5px_5px_0px_#2A0800];
+    border-radius: 8px 12px 6px 14px;
+}
+
+.progress-bar-container {
+    @apply w-full h-6 bg-[--color-accent] border-2 border-[--color-dark] rounded-full overflow-hidden;
+}
+
+.progress-bar-fill {
+    @apply h-full bg-[--color-dark] transition-all duration-500;
+}
+:root {
+    --color-primary: #F4DBD8;
+    --color-secondary: #BEA8A7;
+    --color-accent: #C09891;
+    --color-dark: #775144;
+    --color-deep: #2A0800;
+}
