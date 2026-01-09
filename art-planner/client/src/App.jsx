@@ -1,6 +1,6 @@
 
 import './App.css'
-import AuthPage from './components/AuthPage';
+import AuthPage from './pages/AuthPage.jsx';
 function App() {
     return <AuthPage />;
 }
