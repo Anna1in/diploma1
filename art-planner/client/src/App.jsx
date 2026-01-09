@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import AuthPage from './pages/AuthPage.jsx';
 import PlannerPage from './pages/PlannerPage.jsx';
