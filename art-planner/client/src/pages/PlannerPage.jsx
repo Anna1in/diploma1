@@ -140,7 +140,7 @@ const PlannerPage = () => {
                     <div className="flex items-center gap-6">
                         <span className="bg-secondary/60 px-10 py-2 rounded-2xl font-bold text-3xl border-3 border-dark italic">
                             {/* ВИПРАВЛЕНО: 'long' замість 'Long' для усунення RangeError */}
-                            {viewDate.toLocaleString('en-US', { month: 'long' })}
+                            { viewDate.toLocaleString('en-US', { month: 'long' }) }
                         </span>
                         <span className="text-5xl font-bold italic text-deep">{viewDate.getFullYear()}</span>
                     </div>

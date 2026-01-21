@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Task = require('../models/Schemas'); // Шлях до моделі
+const { Task } = require('../models/Schemas'); // Шлях до моделі
 
 // Отримати всі таски користувача
 router.get('/:userId', async (req, res) => {
