@@ -60,28 +60,6 @@ app.post('/api/login', async (req, res) => {
 
 // --- TASK LOGIC ---
 app.use('/api/tasks', require('./routes/taskRoutes'))
-app.get('/api/tasks/:userId', async (req, res) => {
-    const tasks = await Task.find({ userId: req.params.userId });
-    res.json(tasks);
-});
-
-app.post('/api/tasks', async (req, res) => {
-    const { userId, text, category, day } = req.body;
-    const newTask = new Task({ userId, text, category, day });
-    await newTask.save();
-    res.json(newTask);
-});
-
-app.patch('/api/tasks/:id', async (req, res) => {
-    const { isCompleted, userId } = req.body;
-    // Перевірка userId гарантує, що користувач редагує тільки свої таски
-    const task = await Task.findOneAndUpdate(
-        { _id: req.params.id, userId: userId },
-        { isCompleted },
-        { new: true }
-    );
-    res.json(task);
-});
 
 // --- MULTER SETUP (AI Instructor) ---
 
