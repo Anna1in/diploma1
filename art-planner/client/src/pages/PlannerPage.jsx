@@ -58,18 +58,21 @@ const PlannerPage = () => {
 
     const calculateProgress = (period) => {
         const now = new Date();
-        let filtered = [];
 
-        if (period === 'Year') {
-            // Річний прогрес за 2026 рік
-            filtered = tasks.filter(task => new Date(task.date).getFullYear() === 2026);
-        } else if (period === 'Month') {
-            filtered = tasks.filter(task => new Date(task.date).getMonth() === now.getMonth());
-        } else if (period === 'Week') {
-            filtered = tasks.filter(task => task.category === 'weekly');
-        } else {
-            filtered = tasks.filter(task => new Date(task.date).toDateString() === now.toDateString());
-        }
+        // Присвоюємо результат фільтрації відразу константі
+        const filtered = (() => {
+            if (period === 'Year') {
+                return tasks.filter(task => new Date(task.date).getFullYear() === 2026);
+            }
+            if (period === 'Month') {
+                return tasks.filter(task => new Date(task.date).getMonth() === now.getMonth());
+            }
+            if (period === 'Week') {
+                return tasks.filter(task => task.category === 'weekly');
+            }
+            // За замовчуванням (Day)
+            return tasks.filter(task => new Date(task.date).toDateString() === now.toDateString());
+        })();
 
         if (filtered.length === 0) return 0;
         const completed = filtered.filter(task => task.isCompleted).length;
