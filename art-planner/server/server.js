@@ -2,39 +2,35 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const multer = require('multer');
-const path = require('path');
-const { User, Task, Art } = require('./models/Schemas');
+
+// Імпортуємо тільки те, що реально використовується в цьому файлі (Auth)
+const { User } = require('./models/Schemas');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
-const fs = require('fs');
 
-
-// Список необхідних папок для роботи AI Instructor та Multer
+// Створення необхідних папок
 const directories = ['uploads', 'results'];
-
 directories.forEach(dir => {
     const dirPath = path.join(__dirname, dir);
     if (!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath, { recursive: true });
-        console.log(`Папка створена: ${dir}`);
     }
 });
-// Статичні папки для зображень
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/results', express.static(path.join(__dirname, 'results')));
-const uri = process.env.MONGODB_URI;
-// MongoDB Connection
-mongoose.connect(uri)
-    .then(() => console.log("БД підключено успішно!"))
-    .catch(err => console.log("DB Connection Error:", err));
 
-// --- AUTH LOGIC ---
+mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log("БД підключено!"))
+    .catch(err => console.log("DB Error:", err));
 
+// --- AUTH LOGIC (залишаємо тут або виносимо в auth.js) ---
 app.post('/api/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
@@ -48,39 +44,24 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (user && await bcrypt.compare(password, user.password)) {
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
-        res.json({ token, userId: user._id, username: user.username });
-    } else {
-        res.status(401).json({ message: "Invalid credentials" });
+    try {
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
+        if (user && await bcrypt.compare(password, user.password)) {
+            const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+            res.json({ token, userId: user._id, username: user.username });
+        } else {
+            res.status(401).json({ message: "Invalid credentials" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: "Login failed" });
     }
 });
 
-// --- TASK LOGIC ---
-app.use('/api/tasks', require('./routes/taskRoutes'))
-
-// --- MULTER SETUP (AI Instructor) ---
-
-const storage = multer.diskStorage({
-    destination: './uploads/',
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    }
-});
-const upload = multer({ storage });
-
-app.post('/api/upload', upload.single('image'), async (req, res) => {
-    const { userId } = req.body;
-    const newArt = new Art({
-        userId,
-        originalPath: req.file.filename,
-        status: 'pending'
-    });
-    await newArt.save();
-    res.json(newArt);
-});
+// --- ПІДКЛЮЧЕННЯ РОУТЕРІВ ---
+// Використовуємо лише зовнішні файли для логіки тасок та AI
+app.use('/api/tasks', require('./routes/taskRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
