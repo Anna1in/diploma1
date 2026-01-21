@@ -59,7 +59,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // --- TASK LOGIC ---
-
+app.use('/api/tasks', require('./routes/taskRoutes'))
 app.get('/api/tasks/:userId', async (req, res) => {
     const tasks = await Task.find({ userId: req.params.userId });
     res.json(tasks);

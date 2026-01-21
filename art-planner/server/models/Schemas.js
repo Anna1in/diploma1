@@ -7,11 +7,11 @@ const UserSchema = new mongoose.Schema({
 });
 
 const TaskSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    text: String,
-    category: { type: String, enum: ['day', 'week', 'month', 'year'] },
-    isCompleted: { type: Boolean, default: false },
-    date: { type: Date, default: Date.now }
+    userId: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
+    title: {type: String, required: true, trim: true},
+    category: {type: String, enum: ['day', 'week', 'month', 'year'], required: true},
+    isCompleted: {type: Boolean, default: false},
+    date: {type: Date, default: Date.now}
 });
 
 const ArtSchema = new mongoose.Schema({

@@ -1,146 +1,173 @@
-import React, { useState, useEffect } from 'react';
-import API from '../api/axiosConfig'; // Використовуємо наш конфіг з інтерцепторами
+import React, { useState, useEffect, useCallback } from 'react';
+import API from '../api/axiosConfig';
 
 const PlannerPage = () => {
     const [tasks, setTasks] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true); // Тепер використовується для відображення статусу
+    const [activeInput, setActiveInput] = useState(null);
     const userId = localStorage.getItem('userId');
+    const userName = localStorage.getItem('username') || 'Artist';
 
-    useEffect(() => {
-        if (userId) fetchTasks();
-    }, [userId]);
-
-    const fetchTasks = async () => {
+    // 1. Виправлення: Обгортаємо fetchTasks у useCallback та додаємо обробку помилок
+    const fetchTasks = useCallback(async () => {
         try {
-            // Завдяки інтерцептору, userId додасться або буде використано для фільтрації на бекенді
+            setLoading(true);
             const res = await API.get(`/tasks/${userId}`);
             setTasks(res.data);
-            setLoading(false);
         } catch (err) {
-            console.error("Помилка завантаження завдань:", err);
-            setLoading(false);
+            console.error("Помилка завантаження тасок:", err);
+        } finally {
+            setLoading(false); // Завантаження завершено (успішно чи ні)
         }
-    };
+    }, [userId]);
 
-    const toggleTask = async (id, currentStatus) => {
-        try {
-            // Інтерцептор автоматично додасть userId у запит
-            await API.patch(`/tasks/${id}`, {
-                isCompleted: !currentStatus
-            });
-            fetchTasks(); // Оновлюємо дані після зміни
-        } catch (err) {
-            console.error("Помилка оновлення завдання:", err);
-        }
-    };
-
-    // --- ЛОГІКА ОБЧИСЛЕННЯ ПРОГРЕСУ ---
-
-    const getProgress = (category) => {
-        let filteredTasks;
-
-        if (category === 'year') {
-            // Річний прогрес: сума ВСІХ завдань за поточний календарний рік
-            const currentYear = new Date().getFullYear();
-            filteredTasks = tasks.filter(task => {
-                const taskDate = new Date(task.date);
-                return taskDate.getFullYear() === currentYear;
-            });
+    // 2. Виправлення: Обробляємо проміс у useEffect
+    useEffect(() => {
+        if (userId) {
+            fetchTasks();
         } else {
-            // Для day, week, month фільтруємо за конкретною категорією
-            filteredTasks = tasks.filter(t => t.category === category);
+            setLoading(false);
+        }
+    }, [userId, fetchTasks]);
+
+    const addTask = async (day, title) => {
+        if (!title) return;
+        try {
+            const res = await API.post('/tasks', {
+                userId,
+                title,
+                day,
+                category: day === 'Anytime' ? 'anytime' : 'weekly',
+                date: new Date()
+            });
+            setTasks(prev => [...prev, res.data]);
+            setActiveInput(null);
+        } catch (err) {
+            alert("Не вдалося зберегти завдання");
+        }
+    };
+
+    const toggleTask = async (taskId, isCompleted) => {
+        try {
+            await API.patch(`/tasks/${taskId}`, { isCompleted: !isCompleted });
+            setTasks(tasks.map(t => t._id === taskId ? { ...t, isCompleted: !isCompleted } : t));
+        } catch (err) {
+            console.error("Помилка оновлення статусу");
+        }
+    };
+
+    const calculateProgress = (period) => {
+        const now = new Date();
+        let filtered = [];
+
+        if (period === 'Year') {
+            // Річний прогрес за 2026 рік
+            filtered = tasks.filter(task => new Date(task.date).getFullYear() === 2026);
+        } else if (period === 'Month') {
+            filtered = tasks.filter(task => new Date(task.date).getMonth() === now.getMonth());
+        } else if (period === 'Week') {
+            filtered = tasks.filter(task => task.category === 'weekly');
+        } else {
+            filtered = tasks.filter(task => new Date(task.date).toDateString() === now.toDateString());
         }
 
-        if (filteredTasks.length === 0) return 0;
-
-        const completed = filteredTasks.filter(t => t.isCompleted).length;
-        // Формула: (completed / total) * 100
-        return Math.round((completed / filteredTasks.length) * 100);
+        if (filtered.length === 0) return 0;
+        const completed = filtered.filter(task => task.isCompleted).length;
+        return Math.round((completed / filtered.length) * 100);
     };
+
+    // 3. Візуалізація завантаження
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-secondary flex items-center justify-center font-hand">
+                <div className="text-4xl text-deep animate-bounce italic font-bold">
+                    Loading your plans...
+                </div>
+            </div>
+        );
+    }
 
     const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Anytime'];
 
-    if (loading) return <div className="p-6 text-center">Завантаження планера...</div>;
-
     return (
-        <div className="p-6 max-w-6xl mx-auto">
-            {/* Секція прогрес-барів */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 hand-drawn-card p-6">
-                <div>
-                    {['year', 'month', 'week', 'day'].map(cat => {
-                        const progressValue = getProgress(cat);
-                        return (
-                            <div key={cat} className="mb-4">
-                                <div className="flex justify-between font-bold capitalize mb-1">
-                                    <span>{cat}: {progressValue}%</span>
-                                </div>
-                                <div className="progress-bar-container">
-                                    <div
-                                        className="progress-bar-fill"
-                                        style={{ width: `${progressValue}%` }}
-                                    ></div>
-                                </div>
-                            </div>
-                        );
-                    })}
+        <div className="min-h-screen bg-secondary font-hand text-dark pb-10">
+            <header className="bg-primary pt-8 relative border-b-3 border-dark text-center">
+                <h1 className="text-5xl mb-2 italic font-bold text-deep">Welcome, {userName}</h1>
+                <div className="w-full overflow-hidden leading-none mt-2">
+                    <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-10 text-secondary fill-current">
+                        <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V46.35c0,0,10.13,10.61,46,14.73C158,74.15,221,68.05,321.39,56.44Z"></path>
+                    </svg>
                 </div>
-                <div className="flex flex-col justify-center items-center italic text-lg text-center p-4">
-                    <p>"Мистецтво — це не те, що ви бачите, а те, що ви змушуєте бачити інших."</p>
-                    <p className="mt-4 font-bold text-[--color-deep] border-b-2 border-[--color-dark]">
-                        Art Journey Tracker 2026
-                    </p>
-                </div>
-            </div>
+            </header>
 
-            {/* Тижнева сітка */}
-            <h2 className="text-center text-2xl font-bold mb-6 underline decoration-wavy">Weekly Plan</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-                {daysOfWeek.map(day => (
-                    <div key={day} className="hand-drawn-card p-4 min-h-[180px] flex flex-col">
-                        <h3 className="text-center font-bold border-b-2 border-[--color-dark] mb-2">{day}</h3>
-                        <ul className="text-sm flex-grow">
-                            {tasks.filter(t => t.day === day).map(task => (
-                                <li key={task._id} className="flex items-start gap-2 mb-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={task.isCompleted}
-                                        onChange={() => toggleTask(task._id, task.isCompleted)}
-                                        className="mt-1 accent-[--color-dark] cursor-pointer"
-                                    />
-                                    <span className={`leading-tight ${task.isCompleted ? "line-through opacity-50" : ""}`}>
-                                        {task.text}
-                                    </span>
-                                </li>
+            <main className="max-w-7xl mx-auto p-6 space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Прогрес-бари */}
+                    <section className="bg-accent rounded-3xl p-8 border-3 border-dark shadow-md">
+                        <div className="space-y-5">
+                            {['Year', 'Month', 'Week', 'Day'].map((label) => {
+                                const val = calculateProgress(label);
+                                return (
+                                    <div key={label} className="flex items-center gap-4">
+                                        <div className="flex-1 bg-primary h-7 rounded-lg overflow-hidden border-2 border-dark relative">
+                                            <div className="bg-dark h-full transition-all duration-1000" style={{ width: `${val}%` }}></div>
+                                        </div>
+                                        <span className="w-28 text-right italic font-bold text-xl">{label} : {val}%</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+
+                    <section className="bg-accent rounded-3xl p-6 border-2 border-dark shadow-sm">
+                        <h2 className="text-center text-2xl border-b border-dark mb-4 pb-1 italic font-bold">Daily Focus</h2>
+                        <div className="grid grid-cols-1 text-lg italic gap-2">
+                            {tasks.filter(t => new Date(t.date).toDateString() === new Date().toDateString()).slice(0, 6).map(t => (
+                                <div key={t._id}>• {t.title}</div>
                             ))}
-                        </ul>
-                        <button className="text-xs mt-3 p-1 border border-dashed border-[--color-dark] hover:bg-[--color-accent]/30 transition-colors">
-                            + Додати завдання
-                        </button>
-                    </div>
-                ))}
-            </div>
-
-            {/* Місячний календар */}
-            <h2 className="text-center text-2xl font-bold mb-6 underline decoration-wavy">Monthly Calendar</h2>
-            <div className="hand-drawn-card p-6 overflow-x-auto">
-                <div className="grid grid-cols-7 gap-2 min-w-[600px]">
-                    {Array.from({ length: 31 }, (_, i) => {
-                        // Логіка для відображення виконаних завдань у календарі (крапки)
-                        const hasCompletedTask = tasks.some(t =>
-                            new Date(t.date).getDate() === (i + 1) && t.isCompleted
-                        );
-
-                        return (
-                            <div key={i} className="aspect-square border border-[--color-dark] bg-[--color-accent]/10 p-1 text-xs font-bold relative hover:bg-[--color-secondary] transition-colors cursor-pointer group">
-                                {i + 1}
-                                {hasCompletedTask && (
-                                    <div className="absolute bottom-1 right-1 w-2 h-2 bg-[--color-deep] rounded-full"></div>
-                                )}
-                            </div>
-                        );
-                    })}
+                        </div>
+                    </section>
                 </div>
-            </div>
+
+                {/* Weekly Grid */}
+                <section>
+                    <h2 className="text-center text-4xl mb-6 font-bold italic">Weekly Schedule</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {daysOfWeek.map((day) => (
+                            <div key={day} className="hand-drawn-card bg-primary/80 flex flex-col min-h-[200px]">
+                                <div className="bg-secondary text-center py-2 font-bold text-2xl border-b-2 border-dark">
+                                    {day}
+                                </div>
+                                <div className="p-3 flex-1 space-y-2">
+                                    {tasks.filter(t => t.day === day).map((task) => (
+                                        <div key={task._id} className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={task.isCompleted}
+                                                onChange={() => toggleTask(task._id, task.isCompleted)}
+                                                className="w-5 h-5 accent-dark cursor-pointer"
+                                            />
+                                            <span className={`text-sm italic ${task.isCompleted ? 'line-through opacity-50' : ''}`}>
+                                                {task.title}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    {activeInput === day ? (
+                                        <input
+                                            autoFocus
+                                            className="w-full bg-white border-2 border-dark rounded-lg px-2 py-1 text-sm outline-none"
+                                            onKeyDown={(e) => e.key === 'Enter' && addTask(day, e.target.value)}
+                                            onBlur={() => setActiveInput(null)}
+                                        />
+                                    ) : (
+                                        <button onClick={() => setActiveInput(day)} className="text-dark hover:scale-125 text-2xl font-bold transition-all">+</button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            </main>
         </div>
     );
 };

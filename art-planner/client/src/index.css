@@ -10,8 +10,8 @@
     --color-calendar-dark: #7B584E;
 
     /* Твої шрифти */
-    --font-cursive: "Harlow Solid Italic", cursive;
-    --font-serif: "Jacques Francois", serif;
+    --font-harlow: "Harlow Solid Italic", cursive;
+    --font-jacques: "Jacques Francois", serif;
 
     /* Межі */
     --border-3: 3px;

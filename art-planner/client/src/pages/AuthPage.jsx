@@ -39,12 +39,12 @@ const AuthPage = ({ onLogin }) => {
     };
 
     return (
-        <div className="min-h-screen bg-primary flex flex-col font-hand">
+        <div className="min-h-screen bg-primary flex flex-col font-jacques">
 
             {/* Навігаційна панель */}
             <header className="bg-primary pt-6 pb-4 border-b-3 border-dark text-center">
-                <h1 className="text-4xl text-deep mb-4 tracking-wide italic font-bold">Welcome</h1>
-                <nav className="flex justify-center gap-16 text-xl text-dark font-bold">
+                <h1 className="text-4xl text-deep mb-4 tracking-wide italic font-harlow">Welcome</h1>
+                <nav className="flex justify-center gap-16 text-xl text-dark font-harlow">
                     <button onClick={() => setIsSignUp(false)} className="hover:opacity-60 cursor-pointer">Login</button>
                     <button className="hover:opacity-60 cursor-pointer">Planer</button>
                     <button className="hover:opacity-60 cursor-pointer">AI instructor</button>
@@ -66,7 +66,7 @@ const AuthPage = ({ onLogin }) => {
                     <div className="flex bg-accent rounded-full p-1.5 mb-10 border-2 border-dark relative">
                         <button
                             onClick={() => setIsSignUp(true)}
-                            className={`flex-1 py-3 rounded-full text-2xl font-bold transition-all duration-300 z-10 ${
+                            className={`flex-1 py-3 rounded-full text-2xl --font-harlow transition-all duration-300 z-10 ${
                                 isSignUp ? 'text-deep' : 'opacity-50'
                             }`}
                         >
@@ -74,7 +74,7 @@ const AuthPage = ({ onLogin }) => {
                         </button>
                         <button
                             onClick={() => setIsSignUp(false)}
-                            className={`flex-1 py-3 rounded-full text-2xl font-bold transition-all duration-300 z-10 ${
+                            className={`flex-1 py-3 rounded-full text-2xl --font-harlow transition-all duration-300 z-10 ${
                                 !isSignUp ? 'text-deep' : 'opacity-50'
                             }`}
                         >
@@ -89,7 +89,7 @@ const AuthPage = ({ onLogin }) => {
                     <form className="space-y-6" onSubmit={handleAuth}>
                         {isSignUp && (
                             <div>
-                                <label className="block text-2xl text-dark mb-1 ml-2 font-bold italic">Name</label>
+                                <label className="block text-2xl text-dark mb-1 ml-2 --font-harlow italic">Name</label>
                                 <input
                                     type="text"
                                     required
@@ -101,7 +101,7 @@ const AuthPage = ({ onLogin }) => {
                         )}
 
                         <div>
-                            <label className="block text-2xl text-dark mb-1 ml-2 font-bold italic">Email</label>
+                            <label className="block text-2xl text-dark mb-1 ml-2 --font-harlow italic">Email</label>
                             <input
                                 type="email"
                                 required
@@ -112,7 +112,7 @@ const AuthPage = ({ onLogin }) => {
                         </div>
 
                         <div>
-                            <label className="block text-2xl text-dark mb-1 ml-2 font-bold italic">Password</label>
+                            <label className="block text-2xl text-dark mb-1 ml-2 --font-harlow italic">Password</label>
                             <input
                                 type="password"
                                 required
@@ -122,12 +122,12 @@ const AuthPage = ({ onLogin }) => {
                             />
                         </div>
 
-                        {error && <p className="text-red-700 font-bold text-center">{error}</p>}
+                        {error && <p className="text-red-700 --font-harlow text-center">{error}</p>}
 
                         <div className="pt-8 flex justify-center">
                             <button
                                 type="submit"
-                                className="bg-secondary border-3 border-dark rounded-[2rem] px-14 py-3 text-3xl text-deep font-bold shadow-[6px_6px_0px_#2A0800] hover:scale-105 active:scale-95 transition-all"
+                                className="bg-secondary border-3 border-dark rounded-[2rem] px-14 py-3 text-3xl text-deep --font-harlow shadow-[6px_6px_0px_#2A0800] hover:scale-105 active:scale-95 transition-all"
                             >
                                 {isSignUp ? 'Sign Up' : 'Login'}
                             </button>
