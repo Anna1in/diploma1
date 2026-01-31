@@ -10,7 +10,7 @@ const TaskSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true, trim: true }, // Використовуємо title всюди
     day: { type: String, required: true }, // Додаємо day у схему
-    category: { type: String, enum: ['day', 'week', 'month', 'year', 'anytime'], default: 'day' },
+    category: { type: String, enum: ['day', 'week', 'month', 'year', 'anytime'], default: 'week' },
     isCompleted: { type: Boolean, default: false },
     date: { type: Date, default: Date.now }
 });

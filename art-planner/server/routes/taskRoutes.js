@@ -14,10 +14,13 @@ router.get('/:userId', async (req, res) => {
 
 // Додати нову таску
 router.post('/', async (req, res) => {
+    const { userId, title, day, category, date } = req.body; // Отримуємо всі поля
     const task = new Task({
-        userId: req.body.userId,
-        title: req.body.title,
-        day: req.body.day
+        userId,
+        title,
+        day,
+        category, // Тепер категорія зберігається
+        date // Тепер зберігається саме та дата, яку ви обрали в календарі!
     });
     try {
         const newTask = await task.save();
