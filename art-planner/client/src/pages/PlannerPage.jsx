@@ -6,9 +6,12 @@ const PlannerPage = () => {
     const [loading, setLoading] = useState(true);
     const [activeInput, setActiveInput] = useState(null);
 
-    // selectedDate - це дата, обрана кліком у календарі (точечка)
+    // Поточна реальна дата (31.01.2026)
+    const today = useMemo(() => new Date(2026, 0, 31), []);
+    // selectedDate - дата, обрана в календарі
+    const [selectedDate, setSelectedDate] = useState(today);
+    // viewDate - для перемикання місяців у календарі
     const [viewDate, setViewDate] = useState(new Date(2026, 0, 1));
-    const [selectedDate, setSelectedDate] = useState(new Date(2026, 0, 31)); // 31 січня
 
     const userId = localStorage.getItem('userId');
     const userName = localStorage.getItem('username') || 'Artist';
@@ -25,17 +28,17 @@ const PlannerPage = () => {
 
     useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
-    // Допоміжні функції для роботи з тижнями
+    // Допоміжні функції для розрахунку дат
     const getStartOfWeek = (date) => {
         const d = new Date(date);
         const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Пн - перший день
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Понеділок
         return new Date(d.setDate(diff));
     };
 
     const getDateForWeekday = (startOfWeek, index) => {
         const d = new Date(startOfWeek);
-        d.setHours(0,0,0,0);
+        d.setHours(0, 0, 0, 0);
         d.setDate(d.getDate() + index);
         return d;
     };
@@ -43,7 +46,7 @@ const PlannerPage = () => {
     const addTask = async (dayIndex, title, dayName) => {
         if (!title || !userId) return;
 
-        // Розраховуємо точну дату на основі обраного тижня в календарі
+        // ВИПРАВЛЕНО: Розрахунок дати для конкретного дня обраного тижня
         const startOfWeek = getStartOfWeek(selectedDate);
         const taskDate = dayName === 'Anytime' ? selectedDate : getDateForWeekday(startOfWeek, dayIndex);
 
@@ -53,7 +56,7 @@ const PlannerPage = () => {
                 title,
                 day: dayName,
                 category: dayName === 'Anytime' ? 'anytime' : 'week',
-                date: taskDate // Передаємо точну дату на сервер!
+                date: taskDate // Тепер передаємо точну дату
             });
             setTasks(prev => [...prev, res.data]);
             setActiveInput(null);
@@ -67,25 +70,28 @@ const PlannerPage = () => {
         } catch (err) { console.error(err); }
     };
 
-    // Фільтрація та прогрес
+    // ВИПРАВЛЕНО: Логіка прогресу для тижня та дня
     const calculateProgress = (period) => {
         const filtered = (() => {
             if (period === 'Year') return tasks.filter(t => new Date(t.date).getFullYear() === 2026);
             if (period === 'Month') return tasks.filter(t => new Date(t.date).getMonth() === viewDate.getMonth());
             if (period === 'Week') {
                 const start = getStartOfWeek(selectedDate);
-                const end = new Date(start); end.setDate(end.getDate() + 6);
+                const end = new Date(start);
+                end.setDate(end.getDate() + 6);
+                end.setHours(23, 59, 59, 999);
                 return tasks.filter(t => {
                     const d = new Date(t.date);
                     return d >= start && d <= end;
                 });
             }
-            // Daily - тільки на дату, виділену в календарі
+            // Daily - прогрес для обраної дати (selectedDate)
             return tasks.filter(t => new Date(t.date).toDateString() === selectedDate.toDateString());
         })();
 
         if (filtered.length === 0) return 0;
-        return Math.round((filtered.filter(t => t.isCompleted).length / filtered.length) * 100);
+        const completed = filtered.filter(t => t.isCompleted).length;
+        return Math.round((completed / filtered.length) * 100);
     };
 
     const calendarDays = useMemo(() => {
@@ -107,7 +113,10 @@ const PlannerPage = () => {
 
     return (
         <div className="bg-secondary p-8 font-hand text-dark space-y-12 min-h-screen">
-            <div className="max-w-7xl mx-auto"><h1 className="text-5xl italic font-bold text-deep">Welcome, {userName}</h1></div>
+            {/* Header: Welcome зверху зліва */}
+            <div className="max-w-7xl mx-auto">
+                <h1 className="text-5xl italic font-bold text-deep">Welcome, {userName}</h1>
+            </div>
 
             <main className="max-w-7xl mx-auto space-y-12">
                 {/* 1. Progress & Daily */}
@@ -119,7 +128,6 @@ const PlannerPage = () => {
                                     <div className="flex-1 bg-primary h-8 rounded-xl border-2 border-dark overflow-hidden relative shadow-inner">
                                         <div className="bg-dark h-full transition-all duration-1000" style={{ width: `${calculateProgress(label)}%` }}></div>
                                     </div>
-                                    {/* ВИПРАВЛЕНО: Фіксована ширина прибирає відступ та перенос */}
                                     <span className="w-44 text-right italic font-bold text-2xl flex-shrink-0 whitespace-nowrap">
                                         {label} : {calculateProgress(label)}%
                                     </span>
@@ -128,10 +136,9 @@ const PlannerPage = () => {
                         </div>
                     </section>
 
-                    <section className="bg-accent/50 rounded-3xl p-8 border-2 border-dark shadow-md">
-                        <h2 className="text-center text-3xl border-b-2 border-dark mb-6 italic font-bold">Daily Focus</h2>
-                        <div className="text-xl italic space-y-2">
-                            {/* Відображаємо таски на обрану selectedDate */}
+                    <section className="bg-accent/50 rounded-3xl p-8 border-2 border-dark shadow-md flex flex-col">
+                        <h2 className="text-center text-3xl border-b-2 border-dark mb-6 italic font-bold">Daily</h2>
+                        <div className="text-xl italic space-y-2 flex-1">
                             {tasks.filter(t => new Date(t.date).toDateString() === selectedDate.toDateString()).length > 0 ? (
                                 tasks.filter(t => new Date(t.date).toDateString() === selectedDate.toDateString()).map(t => <div key={t._id}>• {t.title}</div>)
                             ) : <div className="opacity-40 text-center">No tasks for this day</div>}
@@ -141,7 +148,7 @@ const PlannerPage = () => {
 
                 {/* 2. Weekly Schedule (Синхронізовано з обраною датою) */}
                 <section>
-                    <h2 className="text-center text-3xl mb-8 font-bold italic uppercase tracking-widest opacity-80">Weekly</h2>
+                    <h2 className="text-center text-4xl mb-8 font-bold italic uppercase tracking-widest opacity-80">Weekly</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {daysOfWeekNames.map((dayName, idx) => {
                             const currentDayDate = dayName === 'Anytime' ? null : getDateForWeekday(startOfSelectedWeek, idx);
@@ -168,17 +175,17 @@ const PlannerPage = () => {
                     </div>
                 </section>
 
-                {/* 3. Monthly Calendar (з підсвіткою тижня) */}
+                {/* 3. Monthly Calendar */}
                 <section className="bg-accent/30 rounded-[3rem] p-10 border-3 border-dark shadow-inner">
                     <div className="flex justify-between items-center mb-10 px-12">
-                        <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className="text-4xl">«</button>
+                        <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className="text-4xl hover:scale-125 transition-all">«</button>
                         <div className="flex items-center gap-6">
                             <span className="bg-secondary/60 px-10 py-2 rounded-2xl font-bold text-3xl border-3 border-dark italic">
                                 {viewDate.toLocaleString('en-US', { month: 'long' })}
                             </span>
                             <span className="text-5xl font-bold italic text-deep">2026</span>
                         </div>
-                        <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} className="text-4xl">»</button>
+                        <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} className="text-4xl hover:scale-125 transition-all">»</button>
                     </div>
 
                     <div className="grid grid-cols-7 gap-4">
@@ -187,7 +194,9 @@ const PlannerPage = () => {
                         ))}
                         {calendarDays.map((date, i) => {
                             if (!date) return <div key={`empty-${i}`} className="aspect-square opacity-10 bg-dark rounded-2xl"></div>;
+
                             const isSelected = date.toDateString() === selectedDate.toDateString();
+                            const isToday = date.toDateString() === today.toDateString(); // 31.01.2026
 
                             // Виділення тижня
                             const start = getStartOfWeek(selectedDate);
@@ -204,8 +213,9 @@ const PlannerPage = () => {
                                     `}
                                 >
                                     {date.getDate()}
-                                    {tasks.some(t => new Date(t.date).toDateString() === date.toDateString()) && (
-                                        <div className={`absolute bottom-2 right-2 w-2 h-2 rounded-full ${isSelected ? 'bg-primary' : 'bg-accent'}`}></div>
+                                    {/* Точка "Сьогодні" (нижній правий кут) */}
+                                    {isToday && (
+                                        <div className="absolute bottom-2 right-2 w-2.5 h-2.5 rounded-full bg-primary border border-dark"></div>
                                     )}
                                 </div>
                             );
