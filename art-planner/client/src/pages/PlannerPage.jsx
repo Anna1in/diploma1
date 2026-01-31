@@ -11,7 +11,7 @@ const PlannerPage = () => {
     const [selectedDate, setSelectedDate] = useState(new Date());
 
     const userId = localStorage.getItem('userId');
-    const userName = localStorage.getItem('username') || 'Artist';
+    //const userName = localStorage.getItem('username') || 'Artist';
 
     const fetchTasks = useCallback(async () => {
         if (!userId) return;
