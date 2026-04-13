@@ -14,7 +14,7 @@ const PlannerPage = () => {
     const [viewDate, setViewDate] = useState(new Date(2026, 0, 1));
 
     const userId = localStorage.getItem('userId');
-    const userName = localStorage.getItem('username') || 'Artist';
+
 
     const fetchTasks = useCallback(async () => {
         if (!userId) return;
@@ -114,9 +114,7 @@ const PlannerPage = () => {
     return (
         <div className="bg-secondary p-8 font-hand text-dark space-y-12 min-h-screen">
             {/* Header: Welcome зверху зліва */}
-            <div className="max-w-7xl mx-auto">
-                <h1 className="text-5xl italic font-bold text-deep">Welcome, {userName}</h1>
-            </div>
+
 
             <main className="max-w-7xl mx-auto space-y-12">
                 {/* 1. Progress & Daily */}
@@ -156,13 +154,20 @@ const PlannerPage = () => {
                                 <div key={dayName} className="hand-drawn-card bg-primary min-h-[180px] border-2 border-dark rounded-xl flex flex-col shadow-lg">
                                     <div className="bg-secondary/40 text-center py-2 font-bold text-2xl italic border-b-2 border-dark">{dayName}</div>
                                     <div className="p-3 space-y-2 flex-1">
+                                        {/* Список тасок у Weekly Schedule */}
                                         {tasks.filter(t => {
                                             if (dayName === 'Anytime') return t.day === 'Anytime';
                                             return new Date(t.date).toDateString() === currentDayDate?.toDateString();
                                         }).map((task) => (
                                             <div key={task._id} className="flex items-center gap-2 text-sm italic">
-                                                <input type="checkbox" checked={task.isCompleted} onChange={() => toggleTask(task._id, task.isCompleted)} className="w-4 h-4" />
-                                                <span className={task.isCompleted ? 'line-through opacity-40' : ''}>{task.title}</span>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={task.isCompleted}
+                                                    onChange={() => toggleTask(task._id, task.isCompleted)}
+                                                    className="w-5 h-5 accent-dark cursor-pointer rounded-sm"
+                                                />
+                                                <span className={task.isCompleted ? 'line-through opacity-40' : ''}>
+                                                    {task.title}</span>
                                             </div>
                                         ))}
                                         {activeInput === dayName ? (
