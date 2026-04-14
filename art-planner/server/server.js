@@ -27,8 +27,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/results', express.static(path.join(__dirname, 'results')));
 
 mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log("БД підключено!"))
-    .catch(err => console.log("DB Error:", err));
+    .then(() => logger.info("БД підключено успішно!"))
+    .catch(err => logger.error(err.message));
 
 // --- AUTH LOGIC (залишаємо тут або виносимо в auth.js) ---
 app.post('/api/register', async (req, res) => {
