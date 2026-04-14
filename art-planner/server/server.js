@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer'); // Додано
 const logger = require('./utils/logger');
-const { User, Art } = require('./models/Schemas');
+const { Art } = require('./models/Schemas');
 
 const app = express();
 app.use(express.json());
@@ -66,4 +66,6 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+});
