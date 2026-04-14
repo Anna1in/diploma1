@@ -7,6 +7,7 @@ const GalleryPage = () => {
     const [loading, setLoading] = useState(false);
     const API_URL = import.meta.env.VITE_API_URL || 'https://ai-planner-fiqq.onrender.com/api';
     const BASE_URL = API_URL.replace('/api', '');
+    const BACKEND_URL = 'https://ai-planner-fiqq.onrender.com';
 
     const fileInputRef = useRef(null);
     const userId = localStorage.getItem('userId');
@@ -122,12 +123,13 @@ const GalleryPage = () => {
                     {folderArts.map(art => (
                         <div key={art._id} className="flex flex-col items-center">
                             <div className="bg-primary/40 p-2 border border-dark/10 shadow-sm w-full aspect-square flex items-center justify-center mb-3 overflow-hidden">
-                                {/* Показуємо реальний малюнок з сервера */}
-                                // Замість localhost:5000 використовуй динамічний URL свого бекенду
                                 <img
-                                    src={`https://ai-planner-fiqq.onrender.com/uploads/${art.originalPath}`}
+                                    src={`${BACKEND_URL}/uploads/${art.originalPath}`}
                                     alt="Art"
                                     className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        console.log("Помилка завантаження фото за адресою:", e.target.src);
+                                    }}
                                 />
                             </div>
                             {/* Відображаємо оригінальну назву файлу, обрізаючи дату, яку додає multer */}
