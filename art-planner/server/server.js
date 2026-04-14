@@ -7,8 +7,9 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const logger = require('./utils/logger');
-// Імпортуємо тільки те, що реально використовується в цьому файлі (Auth)
-const { User } = require('./models/Schemas');
+
+// ВИПРАВЛЕНО: Імпортуємо модель Art одразу на початку разом із User
+const { User, Art } = require('./models/Schemas');
 
 const app = express();
 app.use(express.json());
@@ -30,7 +31,7 @@ mongoose.connect(process.env.MONGODB_URI)
     .then(() => logger.info("БД підключено успішно!"))
     .catch(err => logger.error(err.message));
 
-// --- AUTH LOGIC (залишаємо тут або виносимо в auth.js) ---
+// --- AUTH LOGIC ---
 app.post('/api/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
@@ -39,6 +40,7 @@ app.post('/api/register', async (req, res) => {
         await newUser.save();
         res.status(201).json({ message: "User created" });
     } catch (err) {
+        logger.error(`Registration error: ${err.message}`);
         res.status(500).json({ error: err.message });
     }
 });
@@ -54,12 +56,26 @@ app.post('/api/login', async (req, res) => {
             res.status(401).json({ message: "Invalid credentials" });
         }
     } catch (err) {
+        logger.error(`Login error: ${err.message}`);
         res.status(500).json({ error: "Login failed" });
     }
 });
 
+// --- ARTS LOGIC ---
+// Отримати всі малюнки конкретного користувача
+app.get('/api/arts/:userId', async (req, res) => {
+    try {
+        // Шукаємо всі малюнки юзера та сортуємо їх від найновіших до найстаріших
+        const arts = await Art.find({ userId: req.params.userId }).sort({ createdAt: -1 });
+        res.json(arts);
+    } catch (err) {
+        // Додано логування помилки через Winston
+        logger.error(`Помилка отримання малюнків для юзера ${req.params.userId}: ${err.message}`);
+        res.status(500).json({ message: "Помилка отримання малюнків", error: err.message });
+    }
+});
+
 // --- ПІДКЛЮЧЕННЯ РОУТЕРІВ ---
-// Використовуємо лише зовнішні файли для логіки тасок та AI
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 
