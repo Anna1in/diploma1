@@ -87,7 +87,15 @@ app.get('/api/arts/:userId', async (req, res) => {
 
 app.post('/api/upload', upload.single('image'), async (req, res) => {
     try {
-        const { userId } = req.body;
+        let { userId } = req.body;
+
+        // Якщо userId прийшов як масив, беремо перший елемент
+        if (Array.isArray(userId)) {
+            userId = userId[0];
+        }
+
+        if (!req.file) return res.status(400).json({ message: "Файл не обрано" });
+
         if (!req.file) return res.status(400).json({ message: "Файл не обрано" });
 
         const newArt = new Art({

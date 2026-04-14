@@ -38,22 +38,21 @@ const GalleryPage = () => {
         if (!file || !userId) return;
 
         const formData = new FormData();
-        formData.append('image', file);
-        formData.append('userId', userId);
+        // Використовуй .set замість .append
+        formData.set('image', file);
+        formData.set('userId', userId);
 
         try {
             setLoading(true);
-            // Відправляємо на твій існуючий роут /api/upload
             const res = await API.post('/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            // Додаємо новий малюнок у стейт, щоб він одразу з'явився на екрані
             setArts(prev => [...prev, res.data]);
         } catch (err) {
-            alert("Помилка завантаження файлу. Перевір чи працює сервер.");
+            alert("Помилка завантаження файлу.");
         } finally {
             setLoading(false);
-            e.target.value = null; // Очищаємо інпут
+            e.target.value = null;
         }
     };
 
@@ -124,8 +123,9 @@ const GalleryPage = () => {
                         <div key={art._id} className="flex flex-col items-center">
                             <div className="bg-primary/40 p-2 border border-dark/10 shadow-sm w-full aspect-square flex items-center justify-center mb-3 overflow-hidden">
                                 {/* Показуємо реальний малюнок з сервера */}
+                                // Замість localhost:5000 використовуй динамічний URL свого бекенду
                                 <img
-                                    src={`${BASE_URL}/uploads/${art.originalPath}`}
+                                    src={`https://ai-planner-fiqq.onrender.com/uploads/${art.originalPath}`}
                                     alt="Art"
                                     className="w-full h-full object-cover"
                                 />
