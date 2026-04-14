@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-    baseURL: 'https://ai-planner-fiqq.onrender.com/api/upload'
+    baseURL: 'https://ai-planner-fiqq.onrender.com/api'
 });
 
 // Додаємо інтерцептор для кожного запиту
