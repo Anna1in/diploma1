@@ -4,75 +4,40 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const multer = require('multer'); // Додано
 const logger = require('./utils/logger');
-const multer = require('multer');
-
-// ВИПРАВЛЕНО: Імпортуємо модель Art одразу на початку разом із User
 const { User, Art } = require('./models/Schemas');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Створення необхідних папок
-const directories = ['uploads', 'results'];
-directories.forEach(dir => {
-    const dirPath = path.join(__dirname, dir);
-    if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-    }
-});
+// Налаштування збереження файлів Multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/'),
     filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 });
 const upload = multer({ storage });
 
+// Створення папок
+const directories = ['uploads', 'results'];
+directories.forEach(dir => {
+    const dirPath = path.join(__dirname, dir);
+    if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
+});
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/results', express.static(path.join(__dirname, 'results')));
 
 mongoose.connect(process.env.MONGODB_URI)
-    .then(() => logger.info("БД підключено успішно!"))
+    .then(() => logger.info("БД підключено!"))
     .catch(err => logger.error(err.message));
 
-// --- AUTH LOGIC ---
-app.post('/api/register', async (req, res) => {
-    try {
-        const { username, email, password } = req.body;
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new User({ username, email, password: hashedPassword });
-        await newUser.save();
-        res.status(201).json({ message: "User created" });
-    } catch (err) {
-        logger.error(`Registration error: ${err.message}`);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post('/api/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const user = await User.findOne({ email });
-        if (user && await bcrypt.compare(password, user.password)) {
-            const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
-            res.json({ token, userId: user._id, username: user.username });
-        } else {
-            res.status(401).json({ message: "Invalid credentials" });
-        }
-    } catch (err) {
-        logger.error(`Login error: ${err.message}`);
-        res.status(500).json({ error: "Login failed" });
-    }
-});
+// РОУТ ДЛЯ ЗАВАНТАЖЕННЯ МАЛЮНКІВ
 app.post('/api/upload', upload.single('image'), async (req, res) => {
     try {
         const { userId } = req.body;
-        if (!req.file) return res.status(400).send('Файл не завантажено');
+        if (!req.file) return res.status(400).json({ message: "Файл не обрано" });
 
-        // Створюємо запис у базі даних
         const newArt = new Art({
             userId,
             originalPath: req.file.filename,
@@ -83,25 +48,20 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         res.status(201).json(newArt);
     } catch (err) {
         logger.error(`Upload error: ${err.message}`);
-        res.status(500).json({ error: "Помилка збереження файлу" });
+        res.status(500).json({ error: "Помилка сервера при завантаженні" });
     }
 });
 
-// --- ARTS LOGIC ---
-// Отримати всі малюнки конкретного користувача
+// Отримати малюнки
 app.get('/api/arts/:userId', async (req, res) => {
     try {
-        // Шукаємо всі малюнки юзера та сортуємо їх від найновіших до найстаріших
         const arts = await Art.find({ userId: req.params.userId }).sort({ createdAt: -1 });
         res.json(arts);
     } catch (err) {
-        // Додано логування помилки через Winston
-        logger.error(`Помилка отримання малюнків для юзера ${req.params.userId}: ${err.message}`);
-        res.status(500).json({ message: "Помилка отримання малюнків", error: err.message });
+        res.status(500).json({ error: err.message });
     }
 });
 
-// --- ПІДКЛЮЧЕННЯ РОУТЕРІВ ---
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 
