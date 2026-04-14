@@ -47,7 +47,7 @@ mongoose.connect(process.env.MONGODB_URI)
     .then(() => logger.info("БД підключено успішно!"))
     .catch(err => logger.error(err.message));
 
-// --- AUTH LOGIC ---
+// --- AUTH LOGIC (залишаємо тут або виносимо в auth.js) ---
 app.post('/api/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
@@ -56,7 +56,6 @@ app.post('/api/register', async (req, res) => {
         await newUser.save();
         res.status(201).json({ message: "User created" });
     } catch (err) {
-        logger.error(`Registration error: ${err.message}`);
         res.status(500).json({ error: err.message });
     }
 });
@@ -72,10 +71,10 @@ app.post('/api/login', async (req, res) => {
             res.status(401).json({ message: "Invalid credentials" });
         }
     } catch (err) {
-        logger.error(`Login error: ${err.message}`);
         res.status(500).json({ error: "Login failed" });
     }
 });
+
 
 // --- UPLOAD LOGIC ---
 app.post('/api/upload', upload.single('image'), async (req, res) => {
