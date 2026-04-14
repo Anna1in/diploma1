@@ -5,6 +5,8 @@ const GalleryPage = () => {
     const [activeFolder, setActiveFolder] = useState(null);
     const [arts, setArts] = useState([]); // Дані з бази
     const [loading, setLoading] = useState(false);
+    const API_URL = import.meta.env.VITE_API_URL || 'https://ai-planner-fiqq.onrender.com/api';
+    const BASE_URL = API_URL.replace('/api', '');
 
     const fileInputRef = useRef(null);
     const userId = localStorage.getItem('userId');
@@ -123,10 +125,9 @@ const GalleryPage = () => {
                             <div className="bg-primary/40 p-2 border border-dark/10 shadow-sm w-full aspect-square flex items-center justify-center mb-3 overflow-hidden">
                                 {/* Показуємо реальний малюнок з сервера */}
                                 <img
-                                    src={`http://localhost:5000/uploads/${art.originalPath}`}
+                                    src={`${BASE_URL}/uploads/${art.originalPath}`}
                                     alt="Art"
                                     className="w-full h-full object-cover"
-                                    onError={(e) => e.target.style.display = 'none'} // Ховаємо, якщо картинка не завантажилась
                                 />
                             </div>
                             {/* Відображаємо оригінальну назву файлу, обрізаючи дату, яку додає multer */}

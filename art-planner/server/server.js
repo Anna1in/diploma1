@@ -16,7 +16,14 @@ app.use(cors());
 
 // Налаштування Multer для завантаження малюнків
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'uploads/'),
+    destination: (req, file, cb) => {
+        const uploadPath = path.join(__dirname, 'uploads');
+        // Перевіряємо чи існує папка безпосередньо перед записом
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        cb(null, uploadPath);
+    },
     filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 });
 const upload = multer({ storage });
