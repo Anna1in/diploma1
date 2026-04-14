@@ -17,14 +17,18 @@ app.use(cors());
 // Налаштування Multer для завантаження малюнків
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadPath = path.join(__dirname, 'uploads');
-        // Перевіряємо чи існує папка безпосередньо перед записом
-        if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath, { recursive: true });
+        // Переконуємося, що використовуємо шлях від кореня проекту
+        const uploadDir = path.resolve(__dirname, 'uploads');
+
+        // Створюємо папку, якщо її раптом немає (хоча краще через .gitkeep)
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
         }
-        cb(null, uploadPath);
+        cb(null, uploadDir);
     },
-    filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
 });
 const upload = multer({ storage });
 
