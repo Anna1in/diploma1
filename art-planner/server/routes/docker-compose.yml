@@ -9,7 +9,7 @@ services:
       - ./server/uploads:/app/uploads
       - ./server/results:/app/results
     depends_on:
-      - mongodb
+      - mongodb://mongodb:27017/ai-planner
 
   mongodb:
     image: mongo:6.0

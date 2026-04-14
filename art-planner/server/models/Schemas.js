@@ -16,11 +16,10 @@ const TaskSchema = new mongoose.Schema({
 });
 
 const ArtSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    originalPath: String,
-    processedPath: String,
-    feedbackText: String,
-    status: { type: String, default: 'pending' },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    originalPath: { type: String, required: true },
+    processedPath: { type: String, default: null },
+    status: { type: String, enum: ['pending', 'processed'], default: 'pending' },
     createdAt: { type: Date, default: Date.now }
 });
 
