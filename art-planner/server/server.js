@@ -7,6 +7,7 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const logger = require('./utils/logger');
+const multer = require('multer');
 
 // ВИПРАВЛЕНО: Імпортуємо модель Art одразу на початку разом із User
 const { User, Art } = require('./models/Schemas');
@@ -23,6 +24,12 @@ directories.forEach(dir => {
         fs.mkdirSync(dirPath, { recursive: true });
     }
 });
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, 'uploads/'),
+    filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+});
+const upload = multer({ storage });
+
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/results', express.static(path.join(__dirname, 'results')));
@@ -58,6 +65,25 @@ app.post('/api/login', async (req, res) => {
     } catch (err) {
         logger.error(`Login error: ${err.message}`);
         res.status(500).json({ error: "Login failed" });
+    }
+});
+app.post('/api/upload', upload.single('image'), async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!req.file) return res.status(400).send('Файл не завантажено');
+
+        // Створюємо запис у базі даних
+        const newArt = new Art({
+            userId,
+            originalPath: req.file.filename,
+            status: 'pending'
+        });
+
+        await newArt.save();
+        res.status(201).json(newArt);
+    } catch (err) {
+        logger.error(`Upload error: ${err.message}`);
+        res.status(500).json({ error: "Помилка збереження файлу" });
     }
 });
 
