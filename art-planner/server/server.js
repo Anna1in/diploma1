@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
+const logger = require('./utils/logger');
 // Імпортуємо тільки те, що реально використовується в цьому файлі (Auth)
 const { User } = require('./models/Schemas');
 
