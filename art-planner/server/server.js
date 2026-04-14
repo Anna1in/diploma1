@@ -89,30 +89,20 @@ app.get('/api/arts/:userId', async (req, res) => {
     }
 });
 
-app.post('/api/upload', upload.single('image'), async (req, res) => {
+app.post('/api/upload', async (req, res) => {
     try {
-        let { userId } = req.body;
-
-        // Якщо userId прийшов як масив, беремо перший елемент
-        if (Array.isArray(userId)) {
-            userId = userId[0];
-        }
-
-        if (!req.file) return res.status(400).json({ message: "Файл не обрано" });
-
-        if (!req.file) return res.status(400).json({ message: "Файл не обрано" });
+        const { userId, image } = req.body; // Отримуємо текст картинки
 
         const newArt = new Art({
             userId,
-            originalPath: req.file.filename,
+            originalPath: image, // Зберігаємо весь текст картинки в базу
             status: 'pending'
         });
 
         await newArt.save();
         res.status(201).json(newArt);
     } catch (err) {
-        console.error("Upload error:", err.message);
-        res.status(500).json({ error: "Помилка сервера при завантаженні" });
+        res.status(500).json({ error: err.message });
     }
 });
 

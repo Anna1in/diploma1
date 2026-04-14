@@ -5,9 +5,6 @@ const GalleryPage = () => {
     const [activeFolder, setActiveFolder] = useState(null);
     const [arts, setArts] = useState([]); // Дані з бази
     const [loading, setLoading] = useState(false);
-    const API_URL = import.meta.env.VITE_API_URL || 'https://ai-planner-fiqq.onrender.com/api';
-    const BASE_URL = API_URL.replace('/api', '');
-    const BACKEND_URL = 'https://ai-planner-fiqq.onrender.com';
 
     const fileInputRef = useRef(null);
     const userId = localStorage.getItem('userId');
@@ -36,25 +33,26 @@ const GalleryPage = () => {
     // Логіка відправки файлу на сервер
     const handleUpload = async (e) => {
         const file = e.target.files[0];
-        if (!file || !userId) return;
+        if (!file) return;
 
-        const formData = new FormData();
-        // Використовуй .set замість .append
-        formData.set('image', file);
-        formData.set('userId', userId);
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = async () => {
+            const base64String = reader.result; // Це і є наша картинка в тексті
 
-        try {
-            setLoading(true);
-            const res = await API.post('/upload', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            setArts(prev => [...prev, res.data]);
-        } catch (err) {
-            alert("Помилка завантаження файлу.");
-        } finally {
-            setLoading(false);
-            e.target.value = null;
-        }
+            try {
+                setLoading(true);
+                const res = await API.post('/upload', {
+                    image: base64String, // Відправляємо як звичайний текст
+                    userId: userId
+                });
+                setArts(prev => [...prev, res.data]);
+            } catch (err) {
+                alert("Помилка завантаження");
+            } finally {
+                setLoading(false);
+            }
+        };
     };
 
     const renderMainView = () => (
@@ -124,7 +122,7 @@ const GalleryPage = () => {
                         <div key={art._id} className="flex flex-col items-center">
                             <div className="bg-primary/40 p-2 border border-dark/10 shadow-sm w-full aspect-square flex items-center justify-center mb-3 overflow-hidden">
                                 <img
-                                    src={`${BACKEND_URL}/uploads/${art.originalPath}`}
+                                    src={art.originalPath}
                                     alt="Art"
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
