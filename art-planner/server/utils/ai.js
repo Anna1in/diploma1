@@ -4,7 +4,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 async function analyzeArtWithGemini(base64Image, userPrompt) {
     const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash"
+        model: "gemini-1.0-pro"
     });
 
     // Тимчасово створюємо промпт БЕЗ картинки
