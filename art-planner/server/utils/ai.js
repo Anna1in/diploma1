@@ -6,7 +6,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 async function analyzeArtWithGemini(base64Image, userPrompt) {
     // ВАЖЛИВО: Використовуй саме цю назву без -latest
     const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash"
+        model: "models/gemini-1.5-flash"
     });
 
     const base64Data = base64Image.includes(",") ? base64Image.split(",")[1] : base64Image;
@@ -44,5 +44,6 @@ async function analyzeArtWithGemini(base64Image, userPrompt) {
         throw new Error("Не вдалося обробити запит через ШІ.");
     }
 }
-
+const result = await genAI.listModels();
+console.log(result);
 module.exports = { analyzeArtWithGemini };
