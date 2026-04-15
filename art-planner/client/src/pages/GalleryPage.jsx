@@ -17,8 +17,7 @@ const GalleryPage = () => {
 
     const folders = [
         { id: 'myArts', title: 'My Arts' },
-        { id: 'processed', title: 'Processed' },
-        { id: 'references', title: 'References for AI' }
+        { id: 'processed', title: 'Processed' }
     ];
 
     const fetchArts = async () => {
@@ -122,7 +121,6 @@ const GalleryPage = () => {
     const renderAiInstructorView = () => {
         const currentArt = arts[currentArtIndex];
 
-        // Спроба безпечно розпарсити дані ШІ, якщо вони є
         let aiData = null;
         if (currentArt?.status === 'processed' && currentArt.processedPath) {
             try {
@@ -155,7 +153,6 @@ const GalleryPage = () => {
                 </div>
 
                 <div className="flex flex-col md:flex-row h-[550px] gap-1">
-                    {/* ФОТО ТА НАВІГАЦІЯ */}
                     <div className="flex-[2] bg-[#2A0800] relative flex items-center justify-center p-10 border-2 border-[#2A0800] overflow-hidden">
                         <button
                             onClick={prevArt}
@@ -166,48 +163,59 @@ const GalleryPage = () => {
 
                         {currentArt && (
                             <div className="relative inline-block" style={{ maxWidth: '100%', maxHeight: '100%' }}>
-                                {/* Оригінальне зображення */}
                                 <img
                                     src={currentArt.originalPath}
                                     alt="Art"
                                     className="block max-w-full max-h-[450px] object-contain shadow-2xl"
                                 />
 
-                                {/* SVG Оверлей для розмітки */}
                                 {aiData && (
                                     <svg
-                                        className="absolute inset-0 pointer-events-none"
-                                        style={{ width: '100%', height: '100%' }}
+                                        className="absolute inset-0"
+                                        // ВАЖЛИВО: pointerEvents: none дозволяє мишці проходити крізь порожні зони SVG,
+                                        // але ми включимо pointerEvents: auto на самих лініях і точках.
+                                        style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
                                     >
-                                        {/* 1. Малюємо структурні лінії (червоні осі) */}
+                                        {/* 1. Структурні лінії (тепер реагують на наведення) */}
                                         {aiData.lines && aiData.lines.map((line, index) => (
-                                            <line
-                                                key={`line-${index}`}
-                                                x1={`${line.x1}%`} y1={`${line.y1}%`}
-                                                x2={`${line.x2}%`} y2={`${line.y2}%`}
-                                                stroke={line.color || "red"}
-                                                strokeWidth="2"
-                                                opacity="0.8"
-                                            />
+                                            <g key={`line-${index}`} style={{ pointerEvents: 'auto', cursor: 'help' }}>
+                                                {/* Невидима товста лінія для легшого "захоплення" мишкою */}
+                                                <line
+                                                    x1={`${line.x1}%`} y1={`${line.y1}%`}
+                                                    x2={`${line.x2}%`} y2={`${line.y2}%`}
+                                                    stroke="transparent"
+                                                    strokeWidth="15"
+                                                />
+                                                {/* Видима кольорова лінія */}
+                                                <line
+                                                    x1={`${line.x1}%`} y1={`${line.y1}%`}
+                                                    x2={`${line.x2}%`} y2={`${line.y2}%`}
+                                                    stroke={line.color || "red"}
+                                                    strokeWidth="2"
+                                                    opacity="0.8"
+                                                >
+                                                    <title>Структурна лінія</title>
+                                                </line>
+                                            </g>
                                         ))}
 
-                                        {/* 2. Малюємо текст і лінії-вказівники */}
+                                        {/* 2. Анотації: Точки та текст, що з'являється при наведенні */}
                                         {aiData.annotations && aiData.annotations.map((ann, index) => (
-                                            <g key={`ann-${index}`}>
-                                                {/* Лінія від тексту до помилки */}
-                                                <line
-                                                    x1={`${ann.text_x}%`} y1={`${ann.text_y}%`}
-                                                    x2={`${ann.pointer_x}%`} y2={`${ann.pointer_y}%`}
-                                                    stroke="red"
-                                                    strokeWidth="1.5"
-                                                    opacity="0.6"
-                                                />
-                                                {/* Тло під текст, щоб його було видно */}
+                                            <g key={`ann-${index}`} className="group" style={{ pointerEvents: 'auto', cursor: 'help' }}>
+                                                {/* Червона пульсуюча точка */}
+                                                <circle cx={`${ann.pointer_x}%`} cy={`${ann.pointer_y}%`} r="5" fill="red" className="animate-pulse" />
+
+                                                {/* Збільшена прозора зона для зручності наведення */}
+                                                <circle cx={`${ann.pointer_x}%`} cy={`${ann.pointer_y}%`} r="15" fill="transparent" />
+
+                                                {/* Текст (за замовчуванням прихований - opacity-0, при наведенні - opacity-100) */}
                                                 <text
-                                                    x={`${ann.text_x}%`} y={`${ann.text_y}%`}
+                                                    x={`${ann.pointer_x}%`} y={`${ann.pointer_y - 3}%`}
                                                     fill="red"
-                                                    fontSize="14"
+                                                    fontSize="15"
                                                     fontWeight="bold"
+                                                    textAnchor="middle" // Відцентровує текст прямо над точкою
+                                                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                                                     style={{
                                                         textShadow: '1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white'
                                                     }}
@@ -229,10 +237,8 @@ const GalleryPage = () => {
                         </button>
                     </div>
 
-                    {/* ЧАТ АБО ФІДБЕК ВІД ШІ */}
                     <div className="flex-1 bg-[#BEA8A7] p-6 border-2 border-[#2A0800] flex flex-col justify-end gap-4">
                         {aiData ? (
-                            // Відображається, якщо фото вже оброблене
                             <div className="flex flex-col h-full gap-3">
                                 <div className="bg-[#C09891] p-3 rounded-md text-[#2A0800] font-bold border border-[#775144] text-center">
                                     Аналіз від ШІ-інструктора
@@ -240,9 +246,11 @@ const GalleryPage = () => {
                                 <div className="flex-1 bg-[#F4DBD8]/90 p-4 border-2 border-[#2A0800] rounded-lg overflow-y-auto text-[#2A0800] whitespace-pre-wrap font-medium shadow-inner">
                                     {aiData.analysis_text}
                                 </div>
+                                <div className="text-sm italic text-[#2A0800] text-center opacity-80 mt-1">
+                                    *Наведіть мишкою на червоні точки або лінії для деталей
+                                </div>
                             </div>
                         ) : (
-                            // Відображається, якщо фото ще НЕ оброблене
                             <>
                                 <div className="bg-[#C09891] p-3 rounded-md text-[#2A0800] text-sm border border-[#775144]">
                                     Очікує на ваш запит
@@ -255,9 +263,11 @@ const GalleryPage = () => {
                                     className="w-full h-32 p-3 bg-[#F4DBD8]/50 border-2 border-[#2A0800] rounded-lg resize-none font-bold text-[#2A0800] focus:outline-none focus:ring-2 focus:ring-[#775144]"
                                 />
 
+                                {/* ДОДАНО ПІДКАЗКУ (title) при наведенні на кнопку */}
                                 <button
                                     onClick={handleAskAI}
                                     disabled={isAnalyzing}
+                                    title={isAnalyzing ? "Обробка триває від 1 до 2 хв..." : "Натисніть для запуску аналізу"}
                                     className={`w-full py-4 border-2 border-[#2A0800] rounded-full text-2xl font-bold italic text-[#2A0800] shadow-md transition-all flex items-center justify-center gap-3 ${
                                         isAnalyzing ? 'bg-gray-400 cursor-wait opacity-70' : 'bg-[#C09891] hover:bg-[#BEA8A7]'
                                     }`}
@@ -294,7 +304,7 @@ const GalleryPage = () => {
                 <div className="bg-[#775144] text-[#F4DBD8] flex justify-between items-center px-10 py-3 mb-8 shadow-lg">
                     <div className="flex items-center gap-4">
                         <button onClick={() => setActiveFolder(null)} className="text-2xl font-bold">←</button>
-                        <span className="text-2xl italic font-bold">Folder: "{folders.find(f => f.id === activeFolder).title}"</span>
+                        <span className="text-2xl italic font-bold">Folder: "{folders.find(f => f.id === activeFolder)?.title}"</span>
                     </div>
                     {activeFolder === 'myArts' && (
                         <div className="flex items-center gap-3 cursor-pointer" onClick={() => fileInputRef.current.click()}>
