@@ -1,20 +1,24 @@
-// server/routes/aiRoutes.js
+const express = require('express');
+const router = express.Router(); // ЦЬОГО РЯДКА НЕ ВИСТАЧАЛО
+const { Art } = require('../models/Schemas');
+const { analyzeArtWithGemini } = require('../utils/ai');
+
 router.post('/analyze', async (req, res) => {
     try {
         const { artId, prompt } = req.body;
-        const art = await Art.findById(artId);
 
+        const art = await Art.findById(artId);
         if (!art) return res.status(404).json({ error: "Малюнок не знайдено" });
 
-        // Передаємо Base64 з бази в Gemini
+        // 1. Відправляємо Base64 з бази в Gemini
         const aiResponse = await analyzeArtWithGemini(art.originalPath, prompt);
 
-        // Створюємо новий запис для папки "Processed"
+        // 2. Створюємо новий запис для папки "Processed"
         const processedArt = new Art({
             userId: art.userId,
-            originalPath: aiResponse.annotated_image_base64, // Зберігаємо нове фото з розміткою
+            originalPath: aiResponse.annotated_image_base64, // Нове фото з червоною розміткою
             customName: `Result_${art.customName}`,
-            processedPath: aiResponse.analysis_text, // Зберігаємо текст поради прямо тут
+            processedPath: aiResponse.analysis_text, // Текстовий фідбек
             status: 'processed'
         });
 
@@ -22,7 +26,12 @@ router.post('/analyze', async (req, res) => {
         res.status(200).json(processedArt);
 
     } catch (err) {
-        if (err.message === "AI_OVERLOADED") return res.status(503).json({ error: "AI_OVERLOADED" });
-        res.status(500).json({ error: err.message });
+        console.error("AI Route Error:", err.message);
+        if (err.message === "AI_OVERLOADED") {
+            return res.status(503).json({ error: "AI_OVERLOADED" });
+        }
+        res.status(500).json({ error: "Помилка сервера при аналізі ШІ" });
     }
 });
+
+module.exports = router;

@@ -1,4 +1,3 @@
-// server/utils/ai.js
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -6,8 +5,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 async function analyzeArtWithGemini(base64Image, userPrompt) {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Очищаємо рядок Base64 від префікса (data:image/jpeg;base64,), якщо він є
-    const base64Data = base64Image.split(",")[1] || base64Image;
+    // Очищаємо рядок Base64 від префікса, якщо він є
+    const base64Data = base64Image.includes(",") ? base64Image.split(",")[1] : base64Image;
 
     const imagePart = {
         inlineData: {
@@ -20,17 +19,22 @@ async function analyzeArtWithGemini(base64Image, userPrompt) {
     ROLE: Професійний викладач образотворчого мистецтва.
     TASK: Проаналізуй малюнок за запитом: "${userPrompt}". 
     Надай професійну критику українською мовою.
-    OUTPUT: ВИКЛЮЧНО JSON {"annotated_image_base64": "...", "analysis_text": "..."}
-    РОЗМІТКА: Наклади червоні лінії поверх помилок анатомії чи перспективи.
+    OUTPUT FORMAT: ПОВИНЕН бути ВИКЛЮЧНО JSON {"annotated_image_base64": "...", "analysis_text": "..."}
+    РОЗМІТКА: Наклади червоні лінії поверх помилок анатомії, пропорцій або перспективи.
     `;
 
     try {
         const result = await model.generateContent([systemPrompt, imagePart]);
         const responseText = result.response.text();
+
+        // Очищення JSON від маркерів Markdown
         const cleanJsonString = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
         return JSON.parse(cleanJsonString);
     } catch (error) {
-        if (error.message.includes("429") || error.message.includes("503")) throw new Error("AI_OVERLOADED");
+        console.error("Gemini API Error:", error);
+        if (error.message.includes("429") || error.message.includes("503")) {
+            throw new Error("AI_OVERLOADED");
+        }
         throw new Error("Не вдалося обробити запит через ШІ.");
     }
 }
