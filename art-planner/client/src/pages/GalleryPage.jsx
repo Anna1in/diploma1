@@ -6,9 +6,9 @@ const GalleryPage = () => {
     const [arts, setArts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [currentArtIndex, setCurrentArtIndex] = useState(null);
-    const [userPrompt, setUserPrompt] = useState(''); // Використовується в чаті AI
-    const [isAnalyzing, setIsAnalyzing] = useState(false); // Використовується для блокування кнопки
-    const [aiOverloadMessage, setAiOverloadMessage] = useState(null); // Додайте цей рядок
+    const [userPrompt, setUserPrompt] = useState('');
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [aiOverloadMessage, setAiOverloadMessage] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [artToDelete, setArtToDelete] = useState(null);
 
@@ -25,7 +25,6 @@ const GalleryPage = () => {
         if (!userId) return;
         try {
             const res = await API.get(`/arts/${userId}`);
-            // Сортуємо: старі малюнки спочатку для коректної нумерації Image_1, Image_2
             setArts(res.data.reverse());
         } catch (err) {
             console.error("Error fetching arts:", err);
@@ -69,7 +68,6 @@ const GalleryPage = () => {
         }
     };
 
-    // ЛОГІКА ПЕРЕМИКАННЯ (Повернуто з минулих версій)
     const nextArt = () => setCurrentArtIndex(prev => (prev + 1) % arts.length);
     const prevArt = () => setCurrentArtIndex(prev => (prev - 1 + arts.length) % arts.length);
 
@@ -77,7 +75,7 @@ const GalleryPage = () => {
         if (!userPrompt.trim()) return alert("Будь ласка, напишіть, що саме вас цікавить.");
 
         setIsAnalyzing(true);
-        setAiOverloadMessage(null); // Очищаємо старі повідомлення перед новим запитом
+        setAiOverloadMessage(null);
 
         try {
             const currentArt = arts[currentArtIndex];
@@ -97,7 +95,6 @@ const GalleryPage = () => {
 
         } catch (err) {
             console.error("AI Error:", err);
-            // Якщо сервер повернув 503 (перевантаження), записуємо текст у стан
             if (err.response?.status === 503) {
                 setAiOverloadMessage("ШІ наразі перевантажений. Спробуйте через 1-2 хвилини.");
             } else {
@@ -124,9 +121,19 @@ const GalleryPage = () => {
 
     const renderAiInstructorView = () => {
         const currentArt = arts[currentArtIndex];
+
+        // Спроба безпечно розпарсити дані ШІ, якщо вони є
+        let aiData = null;
+        if (currentArt?.status === 'processed' && currentArt.processedPath) {
+            try {
+                aiData = JSON.parse(currentArt.processedPath);
+            } catch (e) {
+                console.error("Помилка парсингу JSON від ШІ:", e);
+            }
+        }
+
         return (
             <div className="max-w-5xl mx-auto mt-2 relative">
-                {/* ПОВІДОМЛЕННЯ ПРО ПЕРЕВАНТАЖЕННЯ ШІ (Глобальне вікно) */}
                 {aiOverloadMessage && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
                         <div className="bg-[#F4DBD8] border-4 border-[#2A0800] p-6 max-w-sm text-center shadow-[10px_10px_0px_#775144]">
@@ -141,7 +148,6 @@ const GalleryPage = () => {
                     </div>
                 )}
 
-                {/* ЗАГОЛОВОК З НАЗВОЮ ФОТО */}
                 <div className="bg-[#F4DBD8] p-3 text-center border-b-2 border-[#2A0800] mb-1">
                     <h2 className="text-3xl font-bold italic text-[#2A0800]">
                         {currentArt?.customName || "Loading..."}
@@ -150,58 +156,93 @@ const GalleryPage = () => {
 
                 <div className="flex flex-col md:flex-row h-[550px] gap-1">
                     {/* ФОТО ТА НАВІГАЦІЯ */}
-                    <div className="flex-[2] bg-[#2A0800] relative flex items-center justify-center p-10 border-2 border-[#2A0800]">
+                    <div className="flex-[2] bg-[#2A0800] relative flex items-center justify-center p-10 border-2 border-[#2A0800] overflow-hidden">
                         <button
                             onClick={prevArt}
-                            className="absolute left-4 w-12 h-20 bg-[#BEA8A7] border-2 border-[#2A0800] text-[#2A0800] text-4xl flex items-center justify-center hover:bg-[#C09891] transition-all"
+                            className="absolute left-4 z-50 w-12 h-20 bg-[#BEA8A7] border-2 border-[#2A0800] text-[#2A0800] text-4xl flex items-center justify-center hover:bg-[#C09891] transition-all"
                         >
                             {"<"}
                         </button>
 
                         {currentArt && (
-                            <img
-                                src={currentArt.originalPath}
-                                alt="Art"
-                                className="max-w-full max-h-full object-contain shadow-2xl"
-                            />
+                            // Блок-обгортка потрібен для правильного абсолютного позиціонування рамок
+                            <div className="relative inline-block" style={{ maxWidth: '100%', maxHeight: '100%' }}>
+                                <img
+                                    src={currentArt.originalPath}
+                                    alt="Art"
+                                    className="block max-w-full max-h-[450px] object-contain shadow-2xl"
+                                />
+
+                                {/* Малюємо координати, якщо це оброблене фото */}
+                                {aiData && aiData.problem_areas && aiData.problem_areas.map((area, index) => (
+                                    <div
+                                        key={index}
+                                        className="absolute border-[3px] border-red-500 bg-red-500/20 cursor-help transition-all hover:bg-red-500/40"
+                                        style={{
+                                            left: `${area.box.x}%`,
+                                            top: `${area.box.y}%`,
+                                            width: `${area.box.width}%`,
+                                            height: `${area.box.height}%`
+                                        }}
+                                        title={area.issue} // Текст помилки при наведенні мишкою
+                                    />
+                                ))}
+                            </div>
                         )}
 
                         <button
                             onClick={nextArt}
-                            className="absolute right-4 w-12 h-20 bg-[#BEA8A7] border-2 border-[#2A0800] text-[#2A0800] text-4xl flex items-center justify-center hover:bg-[#C09891] transition-all"
+                            className="absolute right-4 z-50 w-12 h-20 bg-[#BEA8A7] border-2 border-[#2A0800] text-[#2A0800] text-4xl flex items-center justify-center hover:bg-[#C09891] transition-all"
                         >
                             {">"}
                         </button>
                     </div>
 
-                    {/* ЧАТ ТА ЗАПИТ */}
+                    {/* ЧАТ АБО ФІДБЕК ВІД ШІ */}
                     <div className="flex-1 bg-[#BEA8A7] p-6 border-2 border-[#2A0800] flex flex-col justify-end gap-4">
-                        <div className="bg-[#C09891] p-3 rounded-md text-[#2A0800] text-sm border border-[#775144]">
-                            Збережено в папці "Processed"
-                        </div>
+                        {aiData ? (
+                            // Відображається, якщо фото вже оброблене
+                            <div className="flex flex-col h-full gap-3">
+                                <div className="bg-[#C09891] p-3 rounded-md text-[#2A0800] font-bold border border-[#775144] text-center">
+                                    Аналіз від ШІ-інструктора
+                                </div>
+                                <div className="flex-1 bg-[#F4DBD8]/90 p-4 border-2 border-[#2A0800] rounded-lg overflow-y-auto text-[#2A0800] whitespace-pre-wrap font-medium shadow-inner">
+                                    {aiData.analysis_text}
+                                </div>
+                                <div className="text-sm italic text-[#2A0800] text-center opacity-80 mt-1">
+                                    *Наведіть мишкою на червоні зони на малюнку для деталей
+                                </div>
+                            </div>
+                        ) : (
+                            // Відображається, якщо фото ще НЕ оброблене
+                            <>
+                                <div className="bg-[#C09891] p-3 rounded-md text-[#2A0800] text-sm border border-[#775144]">
+                                    Очікує на ваш запит
+                                </div>
 
-                        <textarea
-                            value={userPrompt}
-                            onChange={(e) => setUserPrompt(e.target.value)}
-                            placeholder="Напишіть запит..."
-                            className="w-full h-32 p-3 bg-[#F4DBD8]/50 border-2 border-[#2A0800] rounded-lg resize-none font-bold text-[#2A0800] focus:outline-none focus:ring-2 focus:ring-[#775144]"
-                        />
+                                <textarea
+                                    value={userPrompt}
+                                    onChange={(e) => setUserPrompt(e.target.value)}
+                                    placeholder="Напишіть, що перевірити (анатомія, перспектива...)"
+                                    className="w-full h-32 p-3 bg-[#F4DBD8]/50 border-2 border-[#2A0800] rounded-lg resize-none font-bold text-[#2A0800] focus:outline-none focus:ring-2 focus:ring-[#775144]"
+                                />
 
-                        <button
-                            onClick={handleAskAI}
-                            disabled={isAnalyzing}
-                            className={`w-full py-4 border-2 border-[#2A0800] rounded-full text-2xl font-bold italic text-[#2A0800] shadow-md transition-all flex items-center justify-center gap-3 ${
-                                isAnalyzing ? 'bg-gray-400 cursor-wait opacity-70' : 'bg-[#C09891] hover:bg-[#BEA8A7]'
-                            }`}
-                        >
-                            {isAnalyzing ? (
-                                <>
-                                    {/* Простий CSS Spinner */}
-                                    <div className="w-6 h-6 border-4 border-t-transparent border-[#2A0800] rounded-full animate-spin"></div>
-                                    Analyzing...
-                                </>
-                            ) : 'Ask AI'}
-                        </button>
+                                <button
+                                    onClick={handleAskAI}
+                                    disabled={isAnalyzing}
+                                    className={`w-full py-4 border-2 border-[#2A0800] rounded-full text-2xl font-bold italic text-[#2A0800] shadow-md transition-all flex items-center justify-center gap-3 ${
+                                        isAnalyzing ? 'bg-gray-400 cursor-wait opacity-70' : 'bg-[#C09891] hover:bg-[#BEA8A7]'
+                                    }`}
+                                >
+                                    {isAnalyzing ? (
+                                        <>
+                                            <div className="w-6 h-6 border-4 border-t-transparent border-[#2A0800] rounded-full animate-spin"></div>
+                                            Analyzing...
+                                        </>
+                                    ) : 'Ask AI'}
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
 

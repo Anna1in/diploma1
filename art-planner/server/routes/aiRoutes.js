@@ -1,5 +1,5 @@
 const express = require('express');
-const router = express.Router(); // ЦЬОГО РЯДКА НЕ ВИСТАЧАЛО
+const router = express.Router();
 const { Art } = require('../models/Schemas');
 const { analyzeArtWithGemini } = require('../utils/ai');
 
@@ -14,12 +14,12 @@ router.post('/analyze', async (req, res) => {
         const aiResponse = await analyzeArtWithGemini(art.originalPath, prompt);
 
         // 2. Створюємо новий запис для папки "Processed"
-
         const processedArt = new Art({
             userId: art.userId,
-            originalPath: art.originalPath, // Копіюємо шлях оригіналу, бо нове фото не створюємо
-            customName: `Test_Result_${art.customName}`,
-            processedPath: aiResponse.analysis_text, // Сюди потрапить текст поради
+            originalPath: art.originalPath, // Зберігаємо оригінальне фото як основу
+            customName: `Result_${art.customName}`,
+            // Зберігаємо весь об'єкт (текст + координати) у вигляді JSON-рядка
+            processedPath: JSON.stringify(aiResponse),
             status: 'processed'
         });
 
