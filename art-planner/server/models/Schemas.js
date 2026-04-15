@@ -18,6 +18,7 @@ const TaskSchema = new mongoose.Schema({
 const ArtSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     originalPath: { type: String, required: true },
+    customName: { type: String, required: true }, // Додано для постійної назви
     processedPath: { type: String, default: null },
     status: { type: String, enum: ['pending', 'processed'], default: 'pending' },
     createdAt: { type: Date, default: Date.now }
