@@ -8,7 +8,7 @@ const GalleryPage = () => {
     const [currentArtIndex, setCurrentArtIndex] = useState(null);
     const [userPrompt, setUserPrompt] = useState(''); // Використовується в чаті AI
     const [isAnalyzing, setIsAnalyzing] = useState(false); // Використовується для блокування кнопки
-
+    const [aiOverloadMessage, setAiOverloadMessage] = useState(null); // Додайте цей рядок
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [artToDelete, setArtToDelete] = useState(null);
 
@@ -77,27 +77,29 @@ const GalleryPage = () => {
         if (!userPrompt.trim()) return alert("Будь ласка, напишіть, що саме вас цікавить.");
 
         setIsAnalyzing(true);
-        setAiOverloadMessage(null);
+        setAiOverloadMessage(null); // Очищаємо старі повідомлення перед новим запитом
 
         try {
-            // Видалено 'const res = ', оскільки дані ми все одно перекачуємо через fetchArts()
+            const currentArt = arts[currentArtIndex];
+
             await API.post('/ai/analyze', {
-                artId: activeArtForAi._id,
+                artId: currentArt._id,
                 prompt: userPrompt
             });
 
-            // Оновлюємо список малюнків, щоб з'явився новий результат
             await fetchArts();
 
-            // Скидаємо стан і переходимо до перегляду результатів
-            setActiveArtForAi(null);
             setUserPrompt('');
+            setCurrentArtIndex(null);
             setActiveFolder('processed');
 
+            alert("Аналіз завершено! Перевірте папку Processed.");
+
         } catch (err) {
-            console.error(err);
-            if (err.response?.status === 503 && err.response?.data?.error === "AI_OVERLOADED") {
-                setAiOverloadMessage("AI-інструктор наразі перевантажений. Спробуйте через 1-2 хвилини.");
+            console.error("AI Error:", err);
+            // Якщо сервер повернув 503 (перевантаження), записуємо текст у стан
+            if (err.response?.status === 503) {
+                setAiOverloadMessage("ШІ наразі перевантажений. Спробуйте через 1-2 хвилини.");
             } else {
                 alert("Помилка при аналізі малюнку ШІ.");
             }
@@ -123,38 +125,92 @@ const GalleryPage = () => {
     const renderAiInstructorView = () => {
         const currentArt = arts[currentArtIndex];
         return (
-            <div className="max-w-5xl mx-auto mt-2">
+            <div className="max-w-5xl mx-auto mt-2 relative">
+                {/* ПОВІДОМЛЕННЯ ПРО ПЕРЕВАНТАЖЕННЯ ШІ (Глобальне вікно) */}
+                {aiOverloadMessage && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+                        <div className="bg-[#F4DBD8] border-4 border-[#2A0800] p-6 max-w-sm text-center shadow-[10px_10px_0px_#775144]">
+                            <p className="text-[#2A0800] font-bold mb-4">{aiOverloadMessage}</p>
+                            <button
+                                onClick={() => setAiOverloadMessage(null)}
+                                className="bg-[#BEA8A7] border-2 border-[#2A0800] px-4 py-1 font-bold transition-all hover:bg-[#C09891]"
+                            >
+                                ОК
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ЗАГОЛОВОК З НАЗВОЮ ФОТО */}
                 <div className="bg-[#F4DBD8] p-3 text-center border-b-2 border-[#2A0800] mb-1">
-                    <h2 className="text-3xl font-bold italic text-[#2A0800]">{currentArt.customName}</h2>
+                    <h2 className="text-3xl font-bold italic text-[#2A0800]">
+                        {currentArt?.customName || "Loading..."}
+                    </h2>
                 </div>
 
                 <div className="flex flex-col md:flex-row h-[550px] gap-1">
                     {/* ФОТО ТА НАВІГАЦІЯ */}
                     <div className="flex-[2] bg-[#2A0800] relative flex items-center justify-center p-10 border-2 border-[#2A0800]">
-                        <button onClick={prevArt} className="absolute left-4 w-12 h-20 bg-[#BEA8A7] border-2 border-[#2A0800] text-[#2A0800] text-4xl flex items-center justify-center hover:bg-[#C09891]">{"<"}</button>
-                        <img src={currentArt.originalPath} alt="Art" className="max-w-full max-h-full object-contain shadow-2xl" />
-                        <button onClick={nextArt} className="absolute right-4 w-12 h-20 bg-[#BEA8A7] border-2 border-[#2A0800] text-[#2A0800] text-4xl flex items-center justify-center hover:bg-[#C09891]">{">"}</button>
+                        <button
+                            onClick={prevArt}
+                            className="absolute left-4 w-12 h-20 bg-[#BEA8A7] border-2 border-[#2A0800] text-[#2A0800] text-4xl flex items-center justify-center hover:bg-[#C09891] transition-all"
+                        >
+                            {"<"}
+                        </button>
+
+                        {currentArt && (
+                            <img
+                                src={currentArt.originalPath}
+                                alt="Art"
+                                className="max-w-full max-h-full object-contain shadow-2xl"
+                            />
+                        )}
+
+                        <button
+                            onClick={nextArt}
+                            className="absolute right-4 w-12 h-20 bg-[#BEA8A7] border-2 border-[#2A0800] text-[#2A0800] text-4xl flex items-center justify-center hover:bg-[#C09891] transition-all"
+                        >
+                            {">"}
+                        </button>
                     </div>
 
                     {/* ЧАТ ТА ЗАПИТ */}
                     <div className="flex-1 bg-[#BEA8A7] p-6 border-2 border-[#2A0800] flex flex-col justify-end gap-4">
-                        <div className="bg-[#C09891] p-3 rounded-md text-[#2A0800] text-sm border border-[#775144]">Збережено в папці "Processed"</div>
+                        <div className="bg-[#C09891] p-3 rounded-md text-[#2A0800] text-sm border border-[#775144]">
+                            Збережено в папці "Processed"
+                        </div>
+
                         <textarea
                             value={userPrompt}
-                            onChange={(e) => setUserPrompt(e.target.value)} // Використання setUserPrompt
+                            onChange={(e) => setUserPrompt(e.target.value)}
                             placeholder="Напишіть запит..."
-                            className="w-full h-32 p-3 bg-[#F4DBD8]/50 border-2 border-[#2A0800] rounded-lg resize-none font-bold text-[#2A0800]"
+                            className="w-full h-32 p-3 bg-[#F4DBD8]/50 border-2 border-[#2A0800] rounded-lg resize-none font-bold text-[#2A0800] focus:outline-none focus:ring-2 focus:ring-[#775144]"
                         />
+
                         <button
                             onClick={handleAskAI}
-                            disabled={isAnalyzing} // Використання isAnalyzing
-                            className={`w-full py-4 border-2 border-[#2A0800] rounded-full text-2xl font-bold italic text-[#2A0800] shadow-md transition-all ${isAnalyzing ? 'bg-gray-400' : 'bg-[#C09891] hover:bg-[#BEA8A7]'}`}
+                            disabled={isAnalyzing}
+                            className={`w-full py-4 border-2 border-[#2A0800] rounded-full text-2xl font-bold italic text-[#2A0800] shadow-md transition-all flex items-center justify-center gap-3 ${
+                                isAnalyzing ? 'bg-gray-400 cursor-wait opacity-70' : 'bg-[#C09891] hover:bg-[#BEA8A7]'
+                            }`}
                         >
-                            {isAnalyzing ? 'Analyzing...' : 'Ask AI'}
+                            {isAnalyzing ? (
+                                <>
+                                    {/* Простий CSS Spinner */}
+                                    <div className="w-6 h-6 border-4 border-t-transparent border-[#2A0800] rounded-full animate-spin"></div>
+                                    Analyzing...
+                                </>
+                            ) : 'Ask AI'}
                         </button>
                     </div>
                 </div>
-                <button onClick={() => setCurrentArtIndex(null)} className="mt-4 text-[#775144] font-bold underline">← Назад до галереї</button>
+
+                <button
+                    onClick={() => setCurrentArtIndex(null)}
+                    className="mt-4 text-[#775144] font-bold underline hover:text-[#2A0800] transition-colors"
+                >
+                    ← Назад до галереї
+                </button>
             </div>
         );
     };
