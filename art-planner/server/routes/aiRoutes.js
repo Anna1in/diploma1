@@ -1,69 +1,40 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
-const { Art } = require('../models/Schemas');
+const { Art } = require('../models/Schemas'); // Переконайся, що шлях правильний
+const { analyzeArtWithGemini } = require('../utils/ai');
 
-// Налаштування Multer для завантаження оригіналів
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'uploads/'),
-    filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
-});
-const upload = multer({ storage });
-
-router.post('/process-art', upload.single('image'), async (req, res) => {
+router.post('/analyze', async (req, res) => {
     try {
-        const { userId, userPrompt } = req.body;
-        const originalFile = req.file;
+        const { artId, prompt } = req.body;
 
-        // 1. Створення запису в БД зі статусом "pending"
-        const artEntry = new Art({
-            userId,
-            originalPath: originalFile.filename,
-            status: 'pending'
+        // 1. Знаходимо малюнок у БД
+        const art = await Art.findById(artId);
+        if (!art) return res.status(404).json({ error: "Малюнок не знайдено" });
+
+        // 2. Відправляємо до Gemini
+        const aiResponseText = await analyzeArtWithGemini(art.originalPath, prompt);
+
+        // 3. Зберігаємо результат ШІ у текстовий файл
+        const resultFileName = `Feedback_${Date.now()}.txt`;
+        const resultPath = path.join(__dirname, '..', 'results', resultFileName);
+        fs.writeFileSync(resultPath, aiResponseText);
+
+        // 4. Створюємо новий запис у БД для папки "Processed"
+        const processedArt = new Art({
+            userId: art.userId,
+            originalPath: art.originalPath, // Зберігаємо посилання на оригінальне фото
+            processedPath: resultFileName,  // Додаємо посилання на txt файл
+            status: 'processed'
         });
-        await artEntry.save();
 
-        // 2. Читання зображення для відправки в AI (base64)
-        const imageBase64 = fs.readFileSync(originalFile.path, { encoding: 'base64' });
+        await processedArt.save();
 
-        // 3. Запит до AI API (наприклад, OpenAI або Gemini)
-        const aiResponse = await axios.post('https://api.your-ai-provider.com/v1/analyze', {
-            system_prompt: "Ти професійний викладач академічного малюнку...", // Текст із вашого .txt
-            image: imageBase64,
-            user_prompt: userPrompt
-        });
-
-        const { annotated_image_base64, analysis_text } = aiResponse.data;
-
-        // 4. Постобробка: Збереження тексту та зображення
-        const resultImageName = `processed-${artEntry._id}.png`;
-        const resultTextName = `feedback-${artEntry._id}.txt`;
-
-        // Декодування та збереження зображення
-        fs.writeFileSync(
-            path.join(__dirname, '../results', resultImageName),
-            Buffer.from(annotated_image_base64, 'base64')
-        );
-
-        // Збереження тексту аналізу
-        fs.writeFileSync(
-            path.join(__dirname, '../results', resultTextName),
-            analysis_text
-        );
-
-        // 5. Оновлення запису в БД
-        artEntry.processedPath = resultImageName;
-        artEntry.feedbackText = analysis_text;
-        artEntry.status = 'completed';
-        await artEntry.save();
-
-        res.json(artEntry);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "AI processing failed" });
+        res.status(200).json(processedArt);
+    } catch (err) {
+        console.error("AI Route Error:", err.message);
+        res.status(500).json({ error: "Помилка сервера при аналізі ШІ" });
     }
 });
 
