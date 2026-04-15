@@ -4,12 +4,11 @@ import API from '../api/axiosConfig';
 const GalleryPage = () => {
     const [activeFolder, setActiveFolder] = useState(null);
     const [arts, setArts] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false); // Тепер використовується
 
-    // Стан для роботи з ШІ та гортання фото
     const [currentArtIndex, setCurrentArtIndex] = useState(null);
     const [userPrompt, setUserPrompt] = useState('');
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false); // Тепер використовується
 
     const fileInputRef = useRef(null);
     const userId = localStorage.getItem('userId');
@@ -42,22 +41,34 @@ const GalleryPage = () => {
         reader.onloadend = async () => {
             const base64String = reader.result;
             try {
-                setLoading(true);
+                setLoading(true); // Початок завантаження
                 const res = await API.post('/upload', { image: base64String, userId });
                 setArts(prev => [res.data, ...prev]);
             } catch (err) {
                 alert("Помилка завантаження");
             } finally {
-                setLoading(false);
+                setLoading(false); // Завершення завантаження
             }
         };
     };
 
-    // Навігація між фото
+    const handleAskAI = async () => {
+        if (!userPrompt.trim()) return alert("Напишіть запит");
+
+        try {
+            setIsAnalyzing(true); // Використання setIsAnalyzing
+            // Тут буде логіка виклику AI роута
+            console.log("Analyzing art index:", currentArtIndex);
+        } catch (err) {
+            alert("AI Error");
+        } finally {
+            setIsAnalyzing(false); // Скидання стану
+        }
+    };
+
     const nextArt = () => setCurrentArtIndex(prev => (prev + 1) % arts.length);
     const prevArt = () => setCurrentArtIndex(prev => (prev - 1 + arts.length) % arts.length);
 
-    // Головна сторінка з папками
     const renderMainView = () => (
         <div className="flex flex-col md:flex-row justify-center items-center gap-12 mt-16">
             {folders.map(folder => (
@@ -73,7 +84,6 @@ const GalleryPage = () => {
         </div>
     );
 
-    // СТОРІНКА ЗАПИТУ ДО AI (За шаблоном image_fc74a0.png)
     const renderAiInstructorView = () => {
         const currentArt = arts[currentArtIndex];
         return (
@@ -83,37 +93,29 @@ const GalleryPage = () => {
                 </div>
 
                 <div className="flex flex-col md:flex-row h-[600px] gap-1">
-                    {/* Ліва частина: Фото з навігацією */}
                     <div className="flex-[2] bg-[#2A0F08] relative flex items-center justify-center p-10 border-2 border-black">
-                        <button onClick={prevArt} className="absolute left-4 w-12 h-20 bg-[#8B7369] border-2 border-black text-4xl flex items-center justify-center hover:bg-[#6B4E41] transition-colors">{"<"}</button>
-
-                        <img src={currentArt.originalPath} alt="Current" className="max-w-full max-h-full object-contain shadow-2xl" />
-
-                        <button onClick={nextArt} className="absolute right-4 w-12 h-20 bg-[#8B7369] border-2 border-black text-4xl flex items-center justify-center hover:bg-[#6B4E41] transition-colors">{">"}</button>
+                        <button onClick={prevArt} className="absolute left-4 w-12 h-20 bg-[#8B7369] border-2 border-black text-4xl flex items-center justify-center hover:bg-[#6B4E41]">{"<"}</button>
+                        <img src={currentArt.originalPath} alt="Current" className="max-w-full max-h-full object-contain" />
+                        <button onClick={nextArt} className="absolute right-4 w-12 h-20 bg-[#8B7369] border-2 border-black text-4xl flex items-center justify-center hover:bg-[#6B4E41]">{">"}</button>
                     </div>
 
-                    {/* Права частина: Чат */}
                     <div className="flex-1 bg-[#A1867A] p-6 border-2 border-black flex flex-col justify-end gap-4">
-                        <div className="bg-[#C4B1A8] p-3 rounded-md self-end text-sm border border-black/20">Поясни що не так з кольорами ...</div>
-                        <div className="bg-[#C4B1A8] p-3 rounded-md self-start text-sm italic border border-black/20">Збережено в папці "Processed"</div>
-
-                        <div className="bg-[#C4B1A8] p-4 rounded-md border border-black/20 text-sm leading-relaxed">
-                            Поясни що не так з кольорами, пропорціями обличчя на малюнку. Надай зображення з коректною розміткою та текстовий файл з описом проблем.
-                        </div>
-
                         <textarea
                             value={userPrompt}
                             onChange={(e) => setUserPrompt(e.target.value)}
                             placeholder="Напишіть запит..."
                             className="w-full h-24 p-3 bg-white/50 border-2 border-black rounded-lg resize-none font-bold"
                         />
-
-                        <button className="w-full py-3 bg-[#C4B1A8] border-2 border-black rounded-full text-2xl font-bold italic hover:bg-[#b39d93] transition-all shadow-md">
-                            Ask AI
+                        <button
+                            onClick={handleAskAI}
+                            disabled={isAnalyzing} // Кнопка неактивна під час аналізу
+                            className={`w-full py-3 border-2 border-black rounded-full text-2xl font-bold italic transition-all ${isAnalyzing ? 'bg-gray-400' : 'bg-[#C4B1A8] hover:bg-[#b39d93]'}`}
+                        >
+                            {isAnalyzing ? 'Analyzing...' : 'Ask AI'}
                         </button>
                     </div>
                 </div>
-                <button onClick={() => setCurrentArtIndex(null)} className="mt-4 text-[#6B4E41] font-bold underline">← Повернутися до галереї</button>
+                <button onClick={() => setCurrentArtIndex(null)} className="mt-4 text-[#6B4E41] font-bold underline">← Назад</button>
             </div>
         );
     };
@@ -124,7 +126,6 @@ const GalleryPage = () => {
                 <div className="flex justify-between items-center max-w-6xl mx-auto">
                     <h1 className="text-4xl font-bold italic text-[#6B4E41]">Welcome, {username}</h1>
                     <nav className="flex gap-8 text-xl font-bold text-[#6B4E41]">
-                        <button className="hover:underline">Login</button>
                         <button className="hover:underline">Planer</button>
                         <button className="hover:underline">AI instructor</button>
                     </nav>
@@ -136,8 +137,11 @@ const GalleryPage = () => {
                     <button onClick={() => setActiveFolder(null)} className="text-2xl font-bold">←</button>
                     <span className="text-2xl italic font-bold">Folder: "{folders.find(f => f.id === activeFolder).title}"</span>
                 </div>
-                <div className="flex items-center gap-3 cursor-pointer" onClick={() => fileInputRef.current.click()}>
-                    <span className="text-xl font-bold">Download</span>
+                <div
+                    className={`flex items-center gap-3 cursor-pointer ${loading ? 'opacity-50' : ''}`}
+                    onClick={() => !loading && fileInputRef.current.click()} // Заборона натискання під час завантаження
+                >
+                    <span className="text-xl font-bold">{loading ? 'Uploading...' : 'Download'}</span>
                     <div className="w-10 h-8 bg-[#F5E6DA] rounded flex items-center justify-center text-[#6B4E41] font-extrabold text-2xl">+</div>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleUpload} />
                 </div>
