@@ -1,12 +1,14 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+// Ініціалізація клієнта
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 async function analyzeArtWithGemini(base64Image, userPrompt) {
-    // ЗМІНА ТУТ: Додано -latest для вирішення помилки 404 v1beta
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    // ВАЖЛИВО: Використовуй саме цю назву без -latest
+    const model = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash"
+    });
 
-    // Очищаємо рядок Base64 від префікса, якщо він є
     const base64Data = base64Image.includes(",") ? base64Image.split(",")[1] : base64Image;
 
     const imagePart = {
@@ -32,10 +34,13 @@ async function analyzeArtWithGemini(base64Image, userPrompt) {
         const cleanJsonString = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
         return JSON.parse(cleanJsonString);
     } catch (error) {
-        console.error("Gemini API Error:", error);
-        if (error.message.includes("429") || error.message.includes("503")) {
+        console.error("Gemini API Error Detail:", error);
+
+        // Додаткова перевірка на помилку квоти
+        if (error.status === 429 || error.message.includes("429")) {
             throw new Error("AI_OVERLOADED");
         }
+
         throw new Error("Не вдалося обробити запит через ШІ.");
     }
 }
