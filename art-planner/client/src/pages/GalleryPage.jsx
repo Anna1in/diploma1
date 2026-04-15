@@ -165,28 +165,59 @@ const GalleryPage = () => {
                         </button>
 
                         {currentArt && (
-                            // Блок-обгортка потрібен для правильного абсолютного позиціонування рамок
                             <div className="relative inline-block" style={{ maxWidth: '100%', maxHeight: '100%' }}>
+                                {/* Оригінальне зображення */}
                                 <img
                                     src={currentArt.originalPath}
                                     alt="Art"
                                     className="block max-w-full max-h-[450px] object-contain shadow-2xl"
                                 />
 
-                                {/* Малюємо координати, якщо це оброблене фото */}
-                                {aiData && aiData.problem_areas && aiData.problem_areas.map((area, index) => (
-                                    <div
-                                        key={index}
-                                        className="absolute border-[3px] border-red-500 bg-red-500/20 cursor-help transition-all hover:bg-red-500/40"
-                                        style={{
-                                            left: `${area.box.x}%`,
-                                            top: `${area.box.y}%`,
-                                            width: `${area.box.width}%`,
-                                            height: `${area.box.height}%`
-                                        }}
-                                        title={area.issue} // Текст помилки при наведенні мишкою
-                                    />
-                                ))}
+                                {/* SVG Оверлей для розмітки */}
+                                {aiData && (
+                                    <svg
+                                        className="absolute inset-0 pointer-events-none"
+                                        style={{ width: '100%', height: '100%' }}
+                                    >
+                                        {/* 1. Малюємо структурні лінії (червоні осі) */}
+                                        {aiData.lines && aiData.lines.map((line, index) => (
+                                            <line
+                                                key={`line-${index}`}
+                                                x1={`${line.x1}%`} y1={`${line.y1}%`}
+                                                x2={`${line.x2}%`} y2={`${line.y2}%`}
+                                                stroke={line.color || "red"}
+                                                strokeWidth="2"
+                                                opacity="0.8"
+                                            />
+                                        ))}
+
+                                        {/* 2. Малюємо текст і лінії-вказівники */}
+                                        {aiData.annotations && aiData.annotations.map((ann, index) => (
+                                            <g key={`ann-${index}`}>
+                                                {/* Лінія від тексту до помилки */}
+                                                <line
+                                                    x1={`${ann.text_x}%`} y1={`${ann.text_y}%`}
+                                                    x2={`${ann.pointer_x}%`} y2={`${ann.pointer_y}%`}
+                                                    stroke="red"
+                                                    strokeWidth="1.5"
+                                                    opacity="0.6"
+                                                />
+                                                {/* Тло під текст, щоб його було видно */}
+                                                <text
+                                                    x={`${ann.text_x}%`} y={`${ann.text_y}%`}
+                                                    fill="red"
+                                                    fontSize="14"
+                                                    fontWeight="bold"
+                                                    style={{
+                                                        textShadow: '1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white'
+                                                    }}
+                                                >
+                                                    {ann.text}
+                                                </text>
+                                            </g>
+                                        ))}
+                                    </svg>
+                                )}
                             </div>
                         )}
 
@@ -208,9 +239,6 @@ const GalleryPage = () => {
                                 </div>
                                 <div className="flex-1 bg-[#F4DBD8]/90 p-4 border-2 border-[#2A0800] rounded-lg overflow-y-auto text-[#2A0800] whitespace-pre-wrap font-medium shadow-inner">
                                     {aiData.analysis_text}
-                                </div>
-                                <div className="text-sm italic text-[#2A0800] text-center opacity-80 mt-1">
-                                    *Наведіть мишкою на червоні зони на малюнку для деталей
                                 </div>
                             </div>
                         ) : (
