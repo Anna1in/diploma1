@@ -4,7 +4,16 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 async function analyzeArtWithGemini(base64Image, userPrompt) {
-    // ВАЖЛИВО: Використовуй саме цю назву без -latest
+    try {
+        console.log("=== ДЕБАГ: Отримання списку моделей ===");
+        const modelsResult = await genAI.listModels();
+        const modelNames = modelsResult.models.map(m => m.name);
+        console.log("Доступні моделі:", modelNames);
+        console.log("=======================================");
+    } catch (err) {
+        console.error("Дебаг-помилка (не вдалося отримати моделі):", err.message);
+    }
+
     const model = genAI.getGenerativeModel({
         model: "gemini-1.5-flash"
     });
@@ -18,12 +27,32 @@ async function analyzeArtWithGemini(base64Image, userPrompt) {
         },
     };
 
+    // ОНОВЛЕНИЙ ПРОМПТ
     const systemPrompt = `
     ROLE: Професійний викладач образотворчого мистецтва.
     TASK: Проаналізуй малюнок за запитом: "${userPrompt}". 
-    Надай професійну критику українською мовою.
-    OUTPUT FORMAT: ПОВИНЕН бути ВИКЛЮЧНО JSON {"annotated_image_base64": "...", "analysis_text": "..."}
-    РОЗМІТКА: Наклади червоні лінії поверх помилок анатомії, пропорцій або перспективи.
+    Зверни особливу увагу на анатомію, пропорції та перспективу. Надай професійну критику українською мовою.
+    OUTPUT FORMAT: ПОВИНЕН бути ВИКЛЮЧНО валідний JSON без маркерів Markdown.
+    
+    СТРУКТУРА JSON:
+    {
+      "analysis_text": "Тут твій загальний детальний коментар та поради щодо виправлення.",
+      "problem_areas": [
+        {
+          "issue": "Короткий опис помилки (наприклад, 'Праве око занадто високо')",
+          "box_percentage": {
+            "x": 45, 
+            "y": 30, 
+            "width": 15, 
+            "height": 10
+          }
+        }
+      ]
+    }
+    
+    ПОЯСНЕННЯ ДО box_percentage: Це приблизні координати зони з помилкою у відсотках (від 0 до 100) відносно розмірів зображення. 
+    x - відступ зліва, y - відступ зверху, width - ширина проблемної зони, height - висота.
+    Якщо проблем немає, залиш масив problem_areas порожнім.
     `;
 
     try {
@@ -36,14 +65,12 @@ async function analyzeArtWithGemini(base64Image, userPrompt) {
     } catch (error) {
         console.error("Gemini API Error Detail:", error);
 
-        // Додаткова перевірка на помилку квоти
-        if (error.status === 429 || error.message.includes("429")) {
+        if (error.status === 429 || error.message?.includes("429")) {
             throw new Error("AI_OVERLOADED");
         }
 
         throw new Error("Не вдалося обробити запит через ШІ.");
     }
 }
-const result = await genAI.listModels();
-console.log(result);
+
 module.exports = { analyzeArtWithGemini };

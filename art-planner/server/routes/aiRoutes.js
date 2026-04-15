@@ -14,11 +14,14 @@ router.post('/analyze', async (req, res) => {
         const aiResponse = await analyzeArtWithGemini(art.originalPath, prompt);
 
         // 2. Створюємо новий запис для папки "Processed"
+
         const processedArt = new Art({
             userId: art.userId,
-            originalPath: aiResponse.annotated_image_base64, // Нове фото з червоною розміткою
+            originalPath: art.originalPath, // Залишаємо оригінальне фото, воно не змінюється
             customName: `Result_${art.customName}`,
-            processedPath: aiResponse.analysis_text, // Текстовий фідбек
+            // Зберігаємо текст аналізу. Щоб зберегти ще й координати помилок,
+            // можна перетворити весь об'єкт відповіді у рядок:
+            processedPath: JSON.stringify(aiResponse),
             status: 'processed'
         });
 
