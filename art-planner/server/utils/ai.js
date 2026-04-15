@@ -1,50 +1,69 @@
+// server/utils/ai.js
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require("fs");
 const path = require("path");
 
-// Ініціалізуємо Gemini з твоїм ключем
+// Ініціалізуємо Gemini з ключем з .env
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Функція для конвертації файлу в об'єкт для Gemini
-function fileToGenerativePart(filePath, mimeType) {
+function fileToGenerativePart(filePath) {
+    // Читаємо файл і перетворюємо в base64 для відправки в API
     return {
         inlineData: {
             data: Buffer.from(fs.readFileSync(filePath)).toString("base64"),
-            mimeType
+            mimeType: "image/jpeg" // Або image/png, Gemini обробить обидва
         },
     };
 }
 
 async function analyzeArtWithGemini(fileName, userPrompt) {
-    // Використовуємо модель flash, бо вона швидка і підтримує зображення
+    // Використовуємо найновішу модель, яка підтримує зображення
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+    // Шлях до оригіналу малюнка користувача
     const filePath = path.join(__dirname, '..', 'uploads', fileName);
+    const imagePart = fileToGenerativePart(filePath);
 
-    // Визначаємо тип файлу
-    const ext = path.extname(fileName).toLowerCase();
-    const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
-
-    const imagePart = fileToGenerativePart(filePath, mimeType);
-
-    // Основний системний промпт (ховаємо від користувача)
+    // СИСТЕМНИЙ ПРОМПТ (Твоя інструкція для ШІ)
     const systemPrompt = `
-    Ти — професійний арт-інструктор у застосунку Art Planner. Твоя мета - допомогти художнику покращити його малюнок.
-    Користувач надіслав свій малюнок та наступний коментар/запит: "${userPrompt}".
-    
-    Надай розгорнуту, дружню, але професійну критику українською мовою. 
-    Зверни увагу на те, що просить користувач (анатомія, кольори, композиція тощо). 
-    Структуруй відповідь:
-    1. Що вийшло добре.
-    2. Головні помилки або неточності.
-    3. Поради щодо покращення.
+    ROLE:
+    Ти — професійний викладач образотворчого мистецтва, експерт з анатомії та композиції. Ти також є ШІ, здатним аналізувати зображення та накладати візуальну розмітку.
+
+    TASK:
+    Твоє завдання — проаналізувати наданий користувачем малюнок на основі його запиту: "${userPrompt}". 
+    Надай професійну критику українською мовою.
+
+    OUTPUT FORMAT (CRITICAL):
+    Ти ПОВИНЕН повернути відповідь ВИКЛЮЧНО у форматі JSON з двома ключами. Не додавай жодного вступного чи заключного тексту поза межами JSON об'єкта.
+
+    {
+      "annotated_image_base64": "string (base64 encoded JPEG image data of the original drawing with your visual overlay red marks)",
+      "analysis_text": "string (markdown formatted text containing the detailed explanation and tips)"
+    }
+
+    GUIDELINES ДЛЯ РОЗМІТКИ (Annotated Image):
+    1. Створи нову версію зображення, наклавши на нього чіткі візуальні анотації (червоні лінії).
+    2. Якщо запит про ПРОПОРЦІЇ/АНАТОМІЮ: Використовуй червоні лінії, щоб показати неправильні осі симетрії, сітку Ломіса або відхилення (наприклад, "очі занадто високо", "ніс закороткий").
     `;
 
     try {
         const result = await model.generateContent([systemPrompt, imagePart]);
-        return result.response.text();
+        const responseText = result.response.text();
+
+        // Очищаємо відповідь від можливих маркерів ```json ... ```
+        const cleanJsonString = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+
+        // Перетворюємо рядок у JSON об'єкт
+        return JSON.parse(cleanJsonString);
+
     } catch (error) {
-        console.error("Помилка Gemini API:", error);
+        console.error("Gemini API Error:", error);
+
+        // Обробка помилки перевантаження сервера (Quota Exceeded / Service Unavailable)
+        if (error.message.includes("429") || error.message.includes("503")) {
+            throw new Error("AI_OVERLOADED"); // Спеціальний код для фронтенду
+        }
+
         throw new Error("Не вдалося обробити запит через ШІ.");
     }
 }
