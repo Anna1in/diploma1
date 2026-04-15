@@ -17,11 +17,9 @@ router.post('/analyze', async (req, res) => {
 
         const processedArt = new Art({
             userId: art.userId,
-            originalPath: art.originalPath, // Залишаємо оригінальне фото, воно не змінюється
-            customName: `Result_${art.customName}`,
-            // Зберігаємо текст аналізу. Щоб зберегти ще й координати помилок,
-            // можна перетворити весь об'єкт відповіді у рядок:
-            processedPath: JSON.stringify(aiResponse),
+            originalPath: art.originalPath, // Копіюємо шлях оригіналу, бо нове фото не створюємо
+            customName: `Test_Result_${art.customName}`,
+            processedPath: aiResponse.analysis_text, // Сюди потрапить текст поради
             status: 'processed'
         });
 
