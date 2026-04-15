@@ -74,13 +74,33 @@ const GalleryPage = () => {
     const prevArt = () => setCurrentArtIndex(prev => (prev - 1 + arts.length) % arts.length);
 
     const handleAskAI = async () => {
-        if (!userPrompt.trim()) return alert("Напишіть запит");
+        if (!userPrompt.trim()) return alert("Будь ласка, напишіть, що саме вас цікавить.");
+
+        setIsAnalyzing(true);
+        setAiOverloadMessage(null);
+
         try {
-            setIsAnalyzing(true); // Використання стану аналізу
-            // Тут буде виклик API для AI
-            console.log("Analyzing art:", arts[currentArtIndex].customName);
+            // Видалено 'const res = ', оскільки дані ми все одно перекачуємо через fetchArts()
+            await API.post('/ai/analyze', {
+                artId: activeArtForAi._id,
+                prompt: userPrompt
+            });
+
+            // Оновлюємо список малюнків, щоб з'явився новий результат
+            await fetchArts();
+
+            // Скидаємо стан і переходимо до перегляду результатів
+            setActiveArtForAi(null);
+            setUserPrompt('');
+            setActiveFolder('processed');
+
         } catch (err) {
-            alert("AI Error");
+            console.error(err);
+            if (err.response?.status === 503 && err.response?.data?.error === "AI_OVERLOADED") {
+                setAiOverloadMessage("AI-інструктор наразі перевантажений. Спробуйте через 1-2 хвилини.");
+            } else {
+                alert("Помилка при аналізі малюнку ШІ.");
+            }
         } finally {
             setIsAnalyzing(false);
         }
