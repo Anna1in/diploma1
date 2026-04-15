@@ -96,7 +96,21 @@ app.post('/api/upload', async (req, res) => {
 
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
+// --- DELETE ART LOGIC ---
+app.delete('/api/arts/:artId', async (req, res) => {
+    try {
+        const art = await Art.findById(req.params.artId);
+        if (!art) {
+            return res.status(404).json({ message: "Малюнок не знайдено" });
+        }
 
+        await Art.findByIdAndDelete(req.params.artId);
+        res.json({ message: "Малюнок успішно видалено" });
+    } catch (err) {
+        console.error("Delete error:", err.message);
+        res.status(500).json({ error: "Не вдалося видалити малюнок" });
+    }
+});
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
