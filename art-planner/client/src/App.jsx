@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-ro
 import AuthPage from './pages/AuthPage.jsx';
 import PlannerPage from './pages/PlannerPage.jsx';
 import GalleryPage from './pages/GalleryPage.jsx';
+import AIDetailView from './pages/AIDetailView.jsx';
 import './App.css';
 
 function App() {
