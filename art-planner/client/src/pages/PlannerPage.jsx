@@ -6,15 +6,17 @@ const PlannerPage = () => {
     const [loading, setLoading] = useState(true);
     const [activeInput, setActiveInput] = useState(null);
 
-    // Поточна реальна дата (31.01.2026)
-    const today = useMemo(() => new Date(2026, 0, 31), []);
+    // ВИПРАВЛЕНО: Поточна реальна дата тепер генерується динамічно
+    const today = useMemo(() => new Date(), []);
+
     // selectedDate - дата, обрана в календарі
     const [selectedDate, setSelectedDate] = useState(today);
+
     // viewDate - для перемикання місяців у календарі
-    const [viewDate, setViewDate] = useState(new Date(2026, 0, 1));
+    // ВИПРАВЛЕНО: Початковий місяць також відповідає поточному дню
+    const [viewDate, setViewDate] = useState(today);
 
     const userId = localStorage.getItem('userId');
-
 
     const fetchTasks = useCallback(async () => {
         if (!userId) return;
@@ -46,7 +48,6 @@ const PlannerPage = () => {
     const addTask = async (dayIndex, title, dayName) => {
         if (!title || !userId) return;
 
-        // ВИПРАВЛЕНО: Розрахунок дати для конкретного дня обраного тижня
         const startOfWeek = getStartOfWeek(selectedDate);
         const taskDate = dayName === 'Anytime' ? selectedDate : getDateForWeekday(startOfWeek, dayIndex);
 
@@ -56,7 +57,7 @@ const PlannerPage = () => {
                 title,
                 day: dayName,
                 category: dayName === 'Anytime' ? 'anytime' : 'week',
-                date: taskDate // Тепер передаємо точну дату
+                date: taskDate
             });
             setTasks(prev => [...prev, res.data]);
             setActiveInput(null);
@@ -70,10 +71,9 @@ const PlannerPage = () => {
         } catch (err) { console.error(err); }
     };
 
-    // ВИПРАВЛЕНО: Логіка прогресу для тижня та дня
     const calculateProgress = (period) => {
         const filtered = (() => {
-            if (period === 'Year') return tasks.filter(t => new Date(t.date).getFullYear() === 2026);
+            if (period === 'Year') return tasks.filter(t => new Date(t.date).getFullYear() === viewDate.getFullYear());
             if (period === 'Month') return tasks.filter(t => new Date(t.date).getMonth() === viewDate.getMonth());
             if (period === 'Week') {
                 const start = getStartOfWeek(selectedDate);
@@ -85,7 +85,6 @@ const PlannerPage = () => {
                     return d >= start && d <= end;
                 });
             }
-            // Daily - прогрес для обраної дати (selectedDate)
             return tasks.filter(t => new Date(t.date).toDateString() === selectedDate.toDateString());
         })();
 
@@ -113,9 +112,6 @@ const PlannerPage = () => {
 
     return (
         <div className="bg-secondary p-8 font-hand text-dark space-y-12 min-h-screen">
-            {/* Header: Welcome зверху зліва */}
-
-
             <main className="max-w-7xl mx-auto space-y-12">
                 {/* 1. Progress & Daily */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -144,7 +140,7 @@ const PlannerPage = () => {
                     </section>
                 </div>
 
-                {/* 2. Weekly Schedule (Синхронізовано з обраною датою) */}
+                {/* 2. Weekly Schedule */}
                 <section>
                     <h2 className="text-center text-4xl mb-8 font-bold italic uppercase tracking-widest opacity-80">Weekly</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -154,7 +150,6 @@ const PlannerPage = () => {
                                 <div key={dayName} className="hand-drawn-card bg-primary min-h-[180px] border-2 border-dark rounded-xl flex flex-col shadow-lg">
                                     <div className="bg-secondary/40 text-center py-2 font-bold text-2xl italic border-b-2 border-dark">{dayName}</div>
                                     <div className="p-3 space-y-2 flex-1">
-                                        {/* Список тасок у Weekly Schedule */}
                                         {tasks.filter(t => {
                                             if (dayName === 'Anytime') return t.day === 'Anytime';
                                             return new Date(t.date).toDateString() === currentDayDate?.toDateString();
@@ -184,12 +179,46 @@ const PlannerPage = () => {
                 <section className="bg-accent/30 rounded-[3rem] p-10 border-3 border-dark shadow-inner">
                     <div className="flex justify-between items-center mb-10 px-12">
                         <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className="text-4xl hover:scale-125 transition-all">«</button>
-                        <div className="flex items-center gap-6">
-                            <span className="bg-secondary/60 px-10 py-2 rounded-2xl font-bold text-3xl border-3 border-dark italic">
-                                {viewDate.toLocaleString('en-US', { month: 'long' })}
-                            </span>
-                            <span className="text-5xl font-bold italic text-deep">2026</span>
+
+                        {/* ВИПРАВЛЕНО: Центральний блок з місяцем, роком, попапом і кнопкою Today */}
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="relative flex items-center gap-6 cursor-pointer hover:opacity-80 transition-opacity group">
+                                <span className="bg-secondary/60 px-10 py-2 rounded-2xl font-bold text-3xl border-3 border-dark italic">
+                                    {viewDate.toLocaleString('en-US', { month: 'long' })}
+                                </span>
+                                <span className="text-5xl font-bold italic text-deep">
+                                    {viewDate.getFullYear()}
+                                </span>
+
+                                {/* Прихований input для виклику системного календаря */}
+                                <input
+                                    type="date"
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            // Надійний парсинг без зміщення часових поясів
+                                            const [year, month, day] = e.target.value.split('-');
+                                            const pickedDate = new Date(year, month - 1, day);
+                                            setSelectedDate(pickedDate);
+                                            setViewDate(pickedDate);
+                                        }
+                                    }}
+                                />
+                            </div>
+
+                            {/* Кнопка швидкого повернення до Сьогодні */}
+                            <button
+                                onClick={() => {
+                                    const now = new Date();
+                                    setSelectedDate(now);
+                                    setViewDate(now);
+                                }}
+                                className="bg-primary text-dark border-2 border-dark px-6 py-1 rounded-xl font-bold text-xl italic hover:bg-dark hover:text-primary transition-colors shadow-[2px_2px_0px_#2A0800]"
+                            >
+                                Today
+                            </button>
                         </div>
+
                         <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} className="text-4xl hover:scale-125 transition-all">»</button>
                     </div>
 
@@ -201,9 +230,8 @@ const PlannerPage = () => {
                             if (!date) return <div key={`empty-${i}`} className="aspect-square opacity-10 bg-dark rounded-2xl"></div>;
 
                             const isSelected = date.toDateString() === selectedDate.toDateString();
-                            const isToday = date.toDateString() === today.toDateString(); // 31.01.2026
+                            const isToday = date.toDateString() === today.toDateString();
 
-                            // Виділення тижня
                             const start = getStartOfWeek(selectedDate);
                             const end = new Date(start); end.setDate(end.getDate() + 6);
                             const isInSelectedWeek = date >= start && date <= end;
@@ -218,7 +246,7 @@ const PlannerPage = () => {
                                     `}
                                 >
                                     {date.getDate()}
-                                    {/* Точка "Сьогодні" (нижній правий кут) */}
+                                    {/* Точка "Сьогодні"*/}
                                     {isToday && (
                                         <div className="absolute bottom-2 right-2 w-2.5 h-2.5 rounded-full bg-primary border border-dark"></div>
                                     )}
