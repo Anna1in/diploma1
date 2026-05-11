@@ -7,7 +7,6 @@ on:
     branches: [ master ]
 
 jobs:
-  # --- BACKEND JOB ---
   test-backend:
     name: Backend CI
     runs-on: ubuntu-latest
@@ -25,19 +24,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          # ПЕРЕВІРТЕ: папка має називатися backend
-          cache-dependency-path: art-server/package-lock.json
 
       - name: Install dependencies
-        run: npm ci # Використовуємо npm ci для чистих збірок в CI
+
+        run: npm install
         working-directory: ./art-planner/server
 
       - name: Run Backend Tests
         run: npm test -- --coverage
-        working-directory: ./server
+        working-directory: ./art-planner/server
 
-  # --- FRONTEND JOB ---
   test-frontend:
     name: Frontend CI
     runs-on: ubuntu-latest
@@ -50,14 +46,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          # ПЕРЕВІРТЕ: якщо папка називається client, змініть на client/package-lock.json
-          cache-dependency-path: client/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+
+        run: npm install
         working-directory: ./art-planner/client
 
       - name: Run Frontend Tests
         run: npm run test:coverage
-        working-directory: ./client
+        working-directory: ./art-planner/client
