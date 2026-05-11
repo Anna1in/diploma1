@@ -5,7 +5,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 let mongoServer;
 
 module.exports.connect = async () => {
-    // Закриваємо існуючі з'єднання перед стартом
+
     if (mongoose.connection.readyState !== 0) {
         await mongoose.disconnect();
     }
@@ -18,7 +18,7 @@ module.exports.connect = async () => {
 
 module.exports.closeDatabase = async () => {
     if (mongoose.connection.readyState !== 0) {
-        await mongoose.connection.dropDatabase();
+
         await mongoose.connection.close();
     }
     if (mongoServer) {

@@ -122,9 +122,11 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
 
 module.exports = app;
 if (process.env.NODE_ENV !== 'test') {

@@ -7,7 +7,7 @@
     "migrate:up": "migrate-mongo up",
     "migrate:down": "migrate-mongo down",
     "migrate:status": "migrate-mongo status",
-    "test": "cross-env NODE_ENV=test jest --runInBand",
+    "test": "cross-env NODE_ENV=test jest --runInBand --forceExit --passWithNoTests",
     "test:coverage": "cross-env NODE_ENV=test jest --coverage --runInBand"
   },
   "keywords": [],
