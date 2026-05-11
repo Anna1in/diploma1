@@ -28,9 +28,6 @@ directories.forEach(dir => {
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/results', express.static(path.join(__dirname, 'results')));
 
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log("БД підключено успішно!"))
-    .catch(err => console.error("Помилка підключення БД:", err.message));
 // --- DELETE ART LOGIC ---
 app.delete('/api/arts/:artId', async (req, res) => {
     try {
@@ -47,14 +44,27 @@ app.delete('/api/arts/:artId', async (req, res) => {
     }
 });
 // --- AUTH LOGIC ---
+// --- AUTH LOGIC ---
 app.post('/api/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
+
+        // 1. Перевіряємо, чи такий імейл вже є в базі
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ error: "Email already exists" });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({ username, email, password: hashedPassword });
+
         await newUser.save();
         res.status(201).json({ message: "User created" });
     } catch (err) {
+        // Якщо сталася інша помилка дублікату (на випадок race condition)
+        if (err.code === 11000) {
+            return res.status(400).json({ error: "Email already exists" });
+        }
         console.error("Registration error:", err.message);
         res.status(500).json({ error: err.message });
     }
@@ -115,3 +125,15 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+module.exports = app;
+if (process.env.NODE_ENV !== 'test') {
+    mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI)
+        .then(() => console.log("БД підключено успішно!"))
+        .catch(err => console.error("Помилка підключення БД:", err.message));
+
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
