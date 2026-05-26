@@ -6,14 +6,11 @@ const PlannerPage = () => {
     const [loading, setLoading] = useState(true);
     const [activeInput, setActiveInput] = useState(null);
 
-    // ВИПРАВЛЕНО: Поточна реальна дата тепер генерується динамічно
+    // НОВЕ: id задачі, яку підтверджуємо для видалення
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
     const today = useMemo(() => new Date(), []);
-
-    // selectedDate - дата, обрана в календарі
     const [selectedDate, setSelectedDate] = useState(today);
-
-    // viewDate - для перемикання місяців у календарі
-    // ВИПРАВЛЕНО: Початковий місяць також відповідає поточному дню
     const [viewDate, setViewDate] = useState(today);
 
     const userId = localStorage.getItem('userId');
@@ -30,11 +27,10 @@ const PlannerPage = () => {
 
     useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
-    // Допоміжні функції для розрахунку дат
     const getStartOfWeek = (date) => {
         const d = new Date(date);
         const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Понеділок
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
         return new Date(d.setDate(diff));
     };
 
@@ -47,10 +43,8 @@ const PlannerPage = () => {
 
     const addTask = async (dayIndex, title, dayName) => {
         if (!title || !userId) return;
-
         const startOfWeek = getStartOfWeek(selectedDate);
         const taskDate = dayName === 'Anytime' ? selectedDate : getDateForWeekday(startOfWeek, dayIndex);
-
         try {
             const res = await API.post('/tasks', {
                 userId,
@@ -67,13 +61,29 @@ const PlannerPage = () => {
     const toggleTask = async (taskId, isCompleted) => {
         try {
             await API.patch(`/tasks/${taskId}`, { isCompleted: !isCompleted });
-            setTasks(prev => prev.map(t => t._id === taskId ? { ...t, isCompleted: !isCompleted } : t));
+            setTasks(prev => prev.map(t =>
+                t._id === taskId ? { ...t, isCompleted: !isCompleted } : t
+            ));
         } catch (err) { console.error(err); }
+    };
+
+    // +++ НОВЕ: видалення з БД + оновлення стейту
+    const deleteTask = async () => {
+        if (!confirmDeleteId) return;
+        try {
+            await API.delete(`/tasks/${confirmDeleteId}`);
+            setTasks(prev => prev.filter(t => t._id !== confirmDeleteId));
+        } catch (err) {
+            console.error(err);
+            alert("Не вдалося видалити завдання");
+        } finally {
+            setConfirmDeleteId(null);
+        }
     };
 
     const calculateProgress = (period) => {
         const filtered = (() => {
-            if (period === 'Year') return tasks.filter(t => new Date(t.date).getFullYear() === viewDate.getFullYear());
+            if (period === 'Year')  return tasks.filter(t => new Date(t.date).getFullYear() === viewDate.getFullYear());
             if (period === 'Month') return tasks.filter(t => new Date(t.date).getMonth() === viewDate.getMonth());
             if (period === 'Week') {
                 const start = getStartOfWeek(selectedDate);
@@ -87,10 +97,8 @@ const PlannerPage = () => {
             }
             return tasks.filter(t => new Date(t.date).toDateString() === selectedDate.toDateString());
         })();
-
         if (filtered.length === 0) return 0;
-        const completed = filtered.filter(t => t.isCompleted).length;
-        return Math.round((completed / filtered.length) * 100);
+        return Math.round((filtered.filter(t => t.isCompleted).length / filtered.length) * 100);
     };
 
     const calendarDays = useMemo(() => {
@@ -113,6 +121,7 @@ const PlannerPage = () => {
     return (
         <div className="bg-secondary p-8 font-hand text-dark space-y-12 min-h-screen">
             <main className="max-w-7xl mx-auto space-y-12">
+
                 {/* 1. Progress & Daily */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     <section className="bg-accent/40 rounded-3xl p-8 border-3 border-dark shadow-[6px_6px_0px_#2A0800]">
@@ -134,8 +143,12 @@ const PlannerPage = () => {
                         <h2 className="text-center text-3xl border-b-2 border-dark mb-6 italic font-bold">Daily</h2>
                         <div className="text-xl italic space-y-2 flex-1">
                             {tasks.filter(t => new Date(t.date).toDateString() === selectedDate.toDateString()).length > 0 ? (
-                                tasks.filter(t => new Date(t.date).toDateString() === selectedDate.toDateString()).map(t => <div key={t._id}>• {t.title}</div>)
-                            ) : <div className="opacity-40 text-center">No tasks for this day</div>}
+                                tasks
+                                    .filter(t => new Date(t.date).toDateString() === selectedDate.toDateString())
+                                    .map(t => <div key={t._id}>• {t.title}</div>)
+                            ) : (
+                                <div className="opacity-40 text-center">No tasks for this day</div>
+                            )}
                         </div>
                     </section>
                 </div>
@@ -145,29 +158,61 @@ const PlannerPage = () => {
                     <h2 className="text-center text-4xl mb-8 font-bold italic uppercase tracking-widest opacity-80">Weekly</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {daysOfWeekNames.map((dayName, idx) => {
-                            const currentDayDate = dayName === 'Anytime' ? null : getDateForWeekday(startOfSelectedWeek, idx);
+                            const currentDayDate = dayName === 'Anytime'
+                                ? null
+                                : getDateForWeekday(startOfSelectedWeek, idx);
+
                             return (
                                 <div key={dayName} className="hand-drawn-card bg-primary min-h-[180px] border-2 border-dark rounded-xl flex flex-col shadow-lg">
-                                    <div className="bg-secondary/40 text-center py-2 font-bold text-2xl italic border-b-2 border-dark">{dayName}</div>
+                                    <div className="bg-secondary/40 text-center py-2 font-bold text-2xl italic border-b-2 border-dark">
+                                        {dayName}
+                                    </div>
                                     <div className="p-3 space-y-2 flex-1">
-                                        {tasks.filter(t => {
-                                            if (dayName === 'Anytime') return t.day === 'Anytime';
-                                            return new Date(t.date).toDateString() === currentDayDate?.toDateString();
-                                        }).map((task) => (
-                                            <div key={task._id} className="flex items-center gap-2 text-sm italic">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={task.isCompleted}
-                                                    onChange={() => toggleTask(task._id, task.isCompleted)}
-                                                    className="w-5 h-5 accent-dark cursor-pointer rounded-sm"
-                                                />
-                                                <span className={task.isCompleted ? 'line-through opacity-40' : ''}>
-                                                    {task.title}</span>
-                                            </div>
-                                        ))}
+                                        {tasks
+                                            .filter(t => {
+                                                if (dayName === 'Anytime') return t.day === 'Anytime';
+                                                return new Date(t.date).toDateString() === currentDayDate?.toDateString();
+                                            })
+                                            .map((task) => (
+                                                // +++ НОВЕ: group для показу кнопки видалення при hover
+                                                <div key={task._id} className="group flex items-center gap-2 text-sm italic">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={task.isCompleted}
+                                                        onChange={() => toggleTask(task._id, task.isCompleted)}
+                                                        className="w-5 h-5 accent-dark cursor-pointer rounded-sm flex-shrink-0"
+                                                    />
+                                                    <span className={`flex-1 ${task.isCompleted ? 'line-through opacity-40' : ''}`}>
+                                                        {task.title}
+                                                    </span>
+                                                    {/* +++ НОВЕ: кнопка видалення */}
+                                                    <button
+                                                        onClick={() => setConfirmDeleteId(task._id)}
+                                                        title="Видалити"
+                                                        className="opacity-0 group-hover:opacity-100 transition-opacity
+                                                                   text-red-400 hover:text-red-600 text-base leading-none
+                                                                   flex-shrink-0 px-1"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            ))
+                                        }
                                         {activeInput === dayName ? (
-                                            <input autoFocus className="w-full bg-white border border-dark rounded px-2" onKeyDown={(e) => e.key === 'Enter' && addTask(idx, e.target.value, dayName)} onBlur={() => setActiveInput(null)} />
-                                        ) : <button onClick={() => setActiveInput(dayName)} className="text-dark font-bold text-2xl">+</button>}
+                                            <input
+                                                autoFocus
+                                                className="w-full bg-white border border-dark rounded px-2"
+                                                onKeyDown={(e) => e.key === 'Enter' && addTask(idx, e.target.value, dayName)}
+                                                onBlur={() => setActiveInput(null)}
+                                            />
+                                        ) : (
+                                            <button
+                                                onClick={() => setActiveInput(dayName)}
+                                                className="text-dark font-bold text-2xl"
+                                            >
+                                                +
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -178,9 +223,11 @@ const PlannerPage = () => {
                 {/* 3. Monthly Calendar */}
                 <section className="bg-accent/30 rounded-[3rem] p-10 border-3 border-dark shadow-inner">
                     <div className="flex justify-between items-center mb-10 px-12">
-                        <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className="text-4xl hover:scale-125 transition-all">«</button>
+                        <button
+                            onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
+                            className="text-4xl hover:scale-125 transition-all"
+                        >«</button>
 
-                        {/* ВИПРАВЛЕНО: Центральний блок з місяцем, роком, попапом і кнопкою Today */}
                         <div className="flex flex-col items-center gap-3">
                             <div className="relative flex items-center gap-6 cursor-pointer hover:opacity-80 transition-opacity group">
                                 <span className="bg-secondary/60 px-10 py-2 rounded-2xl font-bold text-3xl border-3 border-dark italic">
@@ -189,14 +236,11 @@ const PlannerPage = () => {
                                 <span className="text-5xl font-bold italic text-deep">
                                     {viewDate.getFullYear()}
                                 </span>
-
-                                {/* Прихований input для виклику системного календаря */}
                                 <input
                                     type="date"
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                     onChange={(e) => {
                                         if (e.target.value) {
-                                            // Надійний парсинг без зміщення часових поясів
                                             const [year, month, day] = e.target.value.split('-');
                                             const pickedDate = new Date(year, month - 1, day);
                                             setSelectedDate(pickedDate);
@@ -205,8 +249,6 @@ const PlannerPage = () => {
                                     }}
                                 />
                             </div>
-
-                            {/* Кнопка швидкого повернення до Сьогодні */}
                             <button
                                 onClick={() => {
                                     const now = new Date();
@@ -219,7 +261,10 @@ const PlannerPage = () => {
                             </button>
                         </div>
 
-                        <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} className="text-4xl hover:scale-125 transition-all">»</button>
+                        <button
+                            onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
+                            className="text-4xl hover:scale-125 transition-all"
+                        >»</button>
                     </div>
 
                     <div className="grid grid-cols-7 gap-4">
@@ -228,14 +273,12 @@ const PlannerPage = () => {
                         ))}
                         {calendarDays.map((date, i) => {
                             if (!date) return <div key={`empty-${i}`} className="aspect-square opacity-10 bg-dark rounded-2xl"></div>;
-
                             const isSelected = date.toDateString() === selectedDate.toDateString();
                             const isToday = date.toDateString() === today.toDateString();
-
                             const start = getStartOfWeek(selectedDate);
-                            const end = new Date(start); end.setDate(end.getDate() + 6);
+                            const end = new Date(start);
+                            end.setDate(end.getDate() + 6);
                             const isInSelectedWeek = date >= start && date <= end;
-
                             return (
                                 <div
                                     key={i}
@@ -246,7 +289,6 @@ const PlannerPage = () => {
                                     `}
                                 >
                                     {date.getDate()}
-                                    {/* Точка "Сьогодні"*/}
                                     {isToday && (
                                         <div className="absolute bottom-2 right-2 w-2.5 h-2.5 rounded-full bg-primary border border-dark"></div>
                                     )}
@@ -256,6 +298,33 @@ const PlannerPage = () => {
                     </div>
                 </section>
             </main>
+
+            {/* +++ НОВЕ: Модальне вікно підтвердження видалення */}
+            {confirmDeleteId && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-secondary border-3 border-dark rounded-3xl p-8 shadow-[8px_8px_0px_#2A0800] max-w-sm w-full font-hand">
+                        <p className="text-2xl font-bold italic text-center mb-6">
+                            Видалити це завдання?
+                        </p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="flex-1 py-2 border-2 border-dark rounded-2xl font-bold text-xl italic
+                                           hover:bg-dark hover:text-primary transition-colors"
+                            >
+                                Скасувати
+                            </button>
+                            <button
+                                onClick={deleteTask}
+                                className="flex-1 py-2 bg-dark text-primary border-2 border-dark rounded-2xl
+                                           font-bold text-xl italic hover:opacity-80 transition-opacity"
+                            >
+                                Видалити
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

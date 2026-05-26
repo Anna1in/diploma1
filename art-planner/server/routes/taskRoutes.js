@@ -46,5 +46,12 @@ router.patch('/:id', async (req, res) => {
         res.status(400).json({ message: err.message });
     }
 });
-
+router.delete('/tasks/:id', authMiddleware, async (req, res) => {
+    const task = await Task.findOneAndDelete({
+        _id: req.params.id,
+        userId: req.user.userId,
+    });
+    if (!task) return res.status(404).json({ message: 'Not found' });
+    res.json({ message: 'Deleted', id: req.params.id });
+});
 module.exports = router;
