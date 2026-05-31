@@ -12,8 +12,7 @@ const AIDetailView = () => {
     const [feedback, setFeedback] = useState(null);
 
     // Беремо URL сервера для підстановки картинок
-    const serverURL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://ai-planner-fiqq.onrender.com';
-
+    const serverURL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
     useEffect(() => {
         fetchArtDetail();
     }, [id]);
