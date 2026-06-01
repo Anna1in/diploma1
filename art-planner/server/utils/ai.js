@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 async function analyzeArtWithGemini(base64Image, userPrompt) {
 
     const model = genAI.getGenerativeModel({
-        model: "gemini-flash-latest"
+        model: "gemini-3.1-flash-lite"
     });
 
     const base64Data = base64Image.includes(",") ? base64Image.split(",")[1] : base64Image;
