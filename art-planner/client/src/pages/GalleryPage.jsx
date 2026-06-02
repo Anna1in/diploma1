@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import API from '../api/axiosConfig';
 
-const GalleryPage = () => {
+const GalleryPage = ({ showToast }) => {
     const [activeFolder, setActiveFolder] = useState(null);
     const [arts, setArts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [currentArtIndex, setCurrentArtIndex] = useState(null);
     const [userPrompt, setUserPrompt] = useState('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [aiOverloadMessage, setAiOverloadMessage] = useState(null);
+    const [hoveredAnnotation, setHoveredAnnotation] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [artToDelete, setArtToDelete] = useState(null);
     const [hoveredFolder, setHoveredFolder] = useState(null); // Стан для підказок папок
@@ -52,7 +52,7 @@ const GalleryPage = () => {
                 const res = await API.post('/upload', { image: reader.result, userId });
                 setArts(prev => [...prev, res.data]);
             } catch (err) {
-                alert("Upload error");
+                showToast("Помилка завантаження файлу", 'error');
             } finally {
                 setLoading(false);
             }
@@ -72,7 +72,7 @@ const GalleryPage = () => {
             setShowDeleteModal(false);
             setArtToDelete(null);
         } catch (err) {
-            alert("Помилка при видаленні");
+            showToast("Помилка при видаленні", 'error');
         }
     };
 
@@ -80,23 +80,31 @@ const GalleryPage = () => {
     const prevArt = () => setCurrentArtIndex(prev => (prev - 1 + arts.length) % arts.length);
 
     const handleAskAI = async () => {
-        if (!userPrompt.trim()) return alert("Будь ласка, напишіть, що саме вас цікавить.");
+        if (!userPrompt.trim()) {
+            showToast("Будь ласка, напишіть, що саме вас цікавить.", 'warning');
+            return;
+        }
         setIsAnalyzing(true);
-        setAiOverloadMessage(null);
 
         try {
             const currentArt = arts[currentArtIndex];
-            await API.post('/ai/analyze', { artId: currentArt._id, prompt: userPrompt });
+            await API.post('/ai/analyze', {
+                artId: currentArt._id,
+                prompt: userPrompt
+            });
             await fetchArts();
             setUserPrompt('');
             setCurrentArtIndex(null);
             setActiveFolder('processed');
-            alert("Аналіз завершено! Перевірте папку Processed.");
+            showToast("Аналіз завершено! Перевірте папку Processed.", 'success');
+
         } catch (err) {
-            if (err.response?.status === 503) {
-                setAiOverloadMessage("ШІ наразі перевантажений. Спробуйте через 1-2 хвилини.");
+            if (err.response?.status === 429) {
+                showToast("Ваш попередній запит ще обробляється. Зачекайте кілька секунд.", 'warning');
+            } else if (err.response?.status === 503) {
+                showToast("ШІ наразі перевантажений. Спробуйте через 1-2 хвилини.", 'warning');
             } else {
-                alert("Помилка при аналізі малюнку ШІ.");
+                showToast("Помилка при аналізі малюнку ШІ", 'error');
             }
         } finally {
             setIsAnalyzing(false);
@@ -125,67 +133,239 @@ const GalleryPage = () => {
             catch (e) { console.error("Error parsing AI JSON:", e); }
         }
 
+        // Рендер тексту з markdown-секціями
+        const renderAnalysisText = (text) => {
+            if (!text) return null;
+            return text.split('\n').map((line, i) => {
+                if (line.startsWith('## ')) {
+                    return (
+                        <p key={i} className="font-bold text-[#2A0800] text-base mt-3 mb-1 border-b border-[#775144]">
+                            {line.replace('## ', '')}
+                        </p>
+                    );
+                }
+                if (line.startsWith('- ')) {
+                    return (
+                        <p key={i} className="text-[#2A0800] text-sm pl-3">
+                            • {line.replace('- ', '')}
+                        </p>
+                    );
+                }
+                if (line.trim() === '') return <br key={i} />;
+                return <p key={i} className="text-[#2A0800] text-sm">{line}</p>;
+            });
+        };
+
         return (
             <div className="max-w-5xl mx-auto mt-2 relative">
-                {aiOverloadMessage && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-                        <div className="bg-[#F4DBD8] border-4 border-[#2A0800] p-6 max-w-sm text-center shadow-[10px_10px_0px_#775144]">
-                            <p className="text-[#2A0800] font-bold mb-4">{aiOverloadMessage}</p>
-                            <button onClick={() => setAiOverloadMessage(null)} className="bg-[#BEA8A7] border-2 border-[#2A0800] px-4 py-1 font-bold hover:bg-[#C09891]">ОК</button>
-                        </div>
-                    </div>
-                )}
+
                 <div className="bg-[#F4DBD8] p-3 text-center border-b-2 border-[#2A0800] mb-1">
-                    <h2 className="text-3xl font-bold italic text-[#2A0800]">{currentArt?.customName || "Loading..."}</h2>
+                    <h2 className="text-3xl font-bold italic text-[#2A0800]">
+                        {currentArt?.customName || "Loading..."}
+                    </h2>
                 </div>
+
                 <div className="flex flex-col md:flex-row h-[550px] gap-1">
+
+                    {/* Ліва частина — зображення з SVG розміткою */}
                     <div className="flex-[2] bg-[#2A0800] relative flex items-center justify-center p-10 border-2 border-[#2A0800] overflow-hidden">
-                        <button onClick={prevArt} className="absolute left-4 z-50 w-12 h-20 bg-[#BEA8A7] border-2 border-[#2A0800] text-[#2A0800] text-4xl hover:bg-[#C09891]">{"<"}</button>
+                        <button
+                            onClick={prevArt}
+                            className="absolute left-4 z-50 w-12 h-20 bg-[#BEA8A7] border-2 border-[#2A0800] text-[#2A0800] text-4xl hover:bg-[#C09891]"
+                        >{"<"}</button>
+
                         {currentArt && (
                             <div className="relative inline-block" style={{ maxWidth: '100%', maxHeight: '100%' }}>
-                                <img src={currentArt.originalPath} alt="Art" className="block max-w-full max-h-[450px] object-contain shadow-2xl" />
+                                <img
+                                    src={currentArt.originalPath}
+                                    alt="Art"
+                                    className="block max-w-full max-h-[450px] object-contain shadow-2xl"
+                                />
                                 {aiData && (
-                                    <svg className="absolute inset-0" style={{ width: '100%', height: '100%', pointerEvents: 'none' }}>
+                                    <svg
+                                        className="absolute inset-0"
+                                        style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
+                                    >
+                                        {/* Структурні лінії */}
                                         {aiData.lines?.map((line, index) => (
-                                            <g key={`line-${index}`} style={{ pointerEvents: 'auto', cursor: 'help' }}>
-                                                <line x1={`${line.x1}%`} y1={`${line.y1}%`} x2={`${line.x2}%`} y2={`${line.y2}%`} stroke="transparent" strokeWidth="15" />
-                                                <line x1={`${line.x1}%`} y1={`${line.y1}%`} x2={`${line.x2}%`} y2={`${line.y2}%`} stroke={line.color || "red"} strokeWidth="2" opacity="0.8"><title>Структурна лінія</title></line>
+                                            <g key={`line-${index}`} style={{ pointerEvents: 'auto' }}>
+                                                {/* Невидима широка зона для hover */}
+                                                <line
+                                                    x1={`${line.x1}%`} y1={`${line.y1}%`}
+                                                    x2={`${line.x2}%`} y2={`${line.y2}%`}
+                                                    stroke="transparent" strokeWidth="14"
+                                                />
+                                                {/* Видима лінія */}
+                                                <line
+                                                    x1={`${line.x1}%`} y1={`${line.y1}%`}
+                                                    x2={`${line.x2}%`} y2={`${line.y2}%`}
+                                                    stroke={line.color || "rgba(255,0,0,0.7)"}
+                                                    strokeWidth="2"
+                                                >
+                                                    <title>{line.label || "Структурна лінія"}</title>
+                                                </line>
+                                                {/* Підпис при hover через foreignObject */}
+                                                {line.label && (
+                                                    <text
+                                                        x={`${(line.x1 + line.x2) / 2}%`}
+                                                        y={`${(line.y1 + line.y2) / 2 - 2}%`}
+                                                        fill="white"
+                                                        fontSize="11"
+                                                        fontWeight="bold"
+                                                        textAnchor="middle"
+                                                        style={{
+                                                            paintOrder: 'stroke',
+                                                            stroke: '#2A0800',
+                                                            strokeWidth: '3px',
+                                                            pointerEvents: 'none'
+                                                        }}
+                                                    >
+                                                        {line.label}
+                                                    </text>
+                                                )}
                                             </g>
                                         ))}
+
+                                        {/* Прямокутники зон */}
+                                        {aiData.rectangles?.map((rect, index) => (
+                                            <g key={`rect-${index}`} style={{ pointerEvents: 'auto' }}>
+                                                <rect
+                                                    x={`${rect.x}%`}
+                                                    y={`${rect.y}%`}
+                                                    width={`${rect.width}%`}
+                                                    height={`${rect.height}%`}
+                                                    fill={rect.color || "rgba(255,165,0,0.2)"}
+                                                    stroke={rect.color?.replace('0.5', '1') || "rgba(255,165,0,1)"}
+                                                    strokeWidth="1.5"
+                                                    strokeDasharray="5,3"
+                                                >
+                                                    <title>{rect.label || ""}</title>
+                                                </rect>
+                                                {rect.label && (
+                                                    <text
+                                                        x={`${rect.x + rect.width / 2}%`}
+                                                        y={`${rect.y + 4}%`}
+                                                        fill="white"
+                                                        fontSize="11"
+                                                        fontWeight="bold"
+                                                        textAnchor="middle"
+                                                        style={{
+                                                            paintOrder: 'stroke',
+                                                            stroke: '#2A0800',
+                                                            strokeWidth: '3px',
+                                                            pointerEvents: 'none'
+                                                        }}
+                                                    >
+                                                        {rect.label}
+                                                    </text>
+                                                )}
+                                            </g>
+                                        ))}
+
+                                        {/* Анотації — точки з tooltip при hover */}
                                         {aiData.annotations?.map((ann, index) => (
-                                            <g key={`ann-${index}`} className="group" style={{ pointerEvents: 'auto', cursor: 'help' }}>
-                                                <circle cx={`${ann.pointer_x}%`} cy={`${ann.pointer_y}%`} r="5" fill="red" className="animate-pulse" />
-                                                <circle cx={`${ann.pointer_x}%`} cy={`${ann.pointer_y}%`} r="15" fill="transparent" />
-                                                <text x={`${ann.pointer_x}%`} y={`${ann.pointer_y - 3}%`} fill="red" fontSize="15" fontWeight="bold" textAnchor="middle" className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" style={{ textShadow: '1px 1px 2px white, -1px -1px 2px white' }}>
-                                                    {ann.text}
-                                                </text>
+                                            <g
+                                                key={`ann-${index}`}
+                                                style={{ pointerEvents: 'auto', cursor: 'help' }}
+                                                onMouseEnter={() => setHoveredAnnotation(index)}
+                                                onMouseLeave={() => setHoveredAnnotation(null)}
+                                            >
+                                                {/* Зовнішнє кільце — тільки при hover */}
+                                                <circle
+                                                    cx={`${ann.pointer_x}%`}
+                                                    cy={`${ann.pointer_y}%`}
+                                                    r="12"
+                                                    fill="rgba(255,0,0,0.15)"
+                                                    stroke="red"
+                                                    strokeWidth="1"
+                                                    opacity={hoveredAnnotation === index ? 1 : 0}
+                                                    style={{ transition: 'opacity 0.2s' }}
+                                                />
+                                                {/* Сама точка — завжди видима */}
+                                                <circle
+                                                    cx={`${ann.pointer_x}%`}
+                                                    cy={`${ann.pointer_y}%`}
+                                                    r="6"
+                                                    fill="red"
+                                                    opacity="0.9"
+                                                />
+                                                {/* Текст — тільки при hover */}
+                                                {hoveredAnnotation === index && (
+                                                    <text
+                                                        x={`${ann.pointer_x}%`}
+                                                        y={`${ann.pointer_y - 5}%`}
+                                                        fill="white"
+                                                        fontSize="11"
+                                                        fontWeight="bold"
+                                                        textAnchor="middle"
+                                                        style={{
+                                                            paintOrder: 'stroke',
+                                                            stroke: '#2A0800',
+                                                            strokeWidth: '3px',
+                                                            pointerEvents: 'none'
+                                                        }}
+                                                    >
+                                                        {ann.text}
+                                                    </text>
+                                                )}
                                             </g>
                                         ))}
                                     </svg>
                                 )}
                             </div>
                         )}
-                        <button onClick={nextArt} className="absolute right-4 z-50 w-12 h-20 bg-[#BEA8A7] border-2 border-[#2A0800] text-[#2A0800] text-4xl hover:bg-[#C09891]">{">"}</button>
+
+                        <button
+                            onClick={nextArt}
+                            className="absolute right-4 z-50 w-12 h-20 bg-[#BEA8A7] border-2 border-[#2A0800] text-[#2A0800] text-4xl hover:bg-[#C09891]"
+                        >{">"}</button>
                     </div>
-                    <div className="flex-1 bg-[#BEA8A7] p-6 border-2 border-[#2A0800] flex flex-col justify-end gap-4">
+
+                    {/* Права частина — текст аналізу або форма запиту */}
+                    <div className="flex-1 bg-[#BEA8A7] p-4 border-2 border-[#2A0800] flex flex-col gap-3">
                         {aiData ? (
-                            <div className="flex flex-col h-full gap-3">
-                                <div className="bg-[#C09891] p-3 rounded-md text-[#2A0800] font-bold border border-[#775144] text-center">Аналіз від ШІ-інструктора</div>
-                                <div className="flex-1 bg-[#F4DBD8]/90 p-4 border-2 border-[#2A0800] rounded-lg overflow-y-auto text-[#2A0800] whitespace-pre-wrap font-medium shadow-inner">{aiData.analysis_text}</div>
-                                <div className="text-sm italic text-[#2A0800] text-center opacity-80 mt-1">*Наведіть мишкою на червоні точки для деталей</div>
+                            <div className="flex flex-col h-full gap-2">
+                                <div className="bg-[#C09891] px-3 py-2 border border-[#775144] text-center">
+                                <span className="text-[#2A0800] font-bold text-sm">
+                                    Аналіз від ШІ-інструктора
+                                </span>
+                                </div>
+                                <div className="flex-1 bg-[#F4DBD8]/90 p-3 border-2 border-[#2A0800] overflow-y-auto shadow-inner leading-relaxed">
+                                    {renderAnalysisText(aiData.analysis_text)}
+                                </div>
+                                <div className="text-xs italic text-[#2A0800] text-center opacity-70">
+                                    * Наведіть на червоні точки або зони для деталей
+                                </div>
                             </div>
                         ) : (
-                            <>
-                                <div className="bg-[#C09891] p-3 rounded-md text-[#2A0800] text-sm border border-[#775144]">Очікує на ваш запит</div>
-                                <textarea value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)} placeholder="Напишіть, що саме перевірити..." className="w-full h-32 p-3 bg-[#F4DBD8]/50 border-2 border-[#2A0800] rounded-lg resize-none font-bold text-[#2A0800] focus:outline-none" />
-                                <button onClick={handleAskAI} disabled={isAnalyzing} className={`w-full py-4 border-2 border-[#2A0800] rounded-full text-2xl font-bold italic text-[#2A0800] transition-all flex items-center justify-center gap-3 ${isAnalyzing ? 'bg-gray-400 cursor-wait' : 'bg-[#C09891] hover:bg-[#BEA8A7]'}`}>
+                            <div className="flex flex-col h-full justify-end gap-3">
+                                <div className="bg-[#C09891] p-3 rounded-md text-[#2A0800] text-sm border border-[#775144]">
+                                    Очікує на ваш запит
+                                </div>
+                                <textarea
+                                    value={userPrompt}
+                                    onChange={(e) => setUserPrompt(e.target.value)}
+                                    placeholder="Напишіть, що саме перевірити..."
+                                    className="w-full h-32 p-3 bg-[#F4DBD8]/50 border-2 border-[#2A0800] rounded-lg resize-none font-bold text-[#2A0800] focus:outline-none"
+                                />
+                                <button
+                                    onClick={handleAskAI}
+                                    disabled={isAnalyzing}
+                                    className={`w-full py-4 border-2 border-[#2A0800] rounded-full text-2xl font-bold italic text-[#2A0800] transition-all flex items-center justify-center gap-3 ${isAnalyzing ? 'bg-gray-400 cursor-wait' : 'bg-[#C09891] hover:bg-[#BEA8A7]'}`}
+                                >
                                     {isAnalyzing ? "Analyzing..." : "Ask AI"}
                                 </button>
-                            </>
+                            </div>
                         )}
                     </div>
                 </div>
-                <button onClick={() => setCurrentArtIndex(null)} className="mt-4 text-[#775144] font-bold underline hover:text-[#2A0800]">← Назад до галереї</button>
+
+                <button
+                    onClick={() => setCurrentArtIndex(null)}
+                    className="mt-4 text-[#775144] font-bold underline hover:text-[#2A0800]"
+                >
+                    ← Назад до галереї
+                </button>
             </div>
         );
     };

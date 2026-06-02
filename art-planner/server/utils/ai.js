@@ -7,6 +7,7 @@ async function analyzeArtWithGemini(base64Image, userPrompt) {
 
     const model = genAI.getGenerativeModel({
         model: "gemini-3.5-flash"
+
     });
 
     const base64Data = base64Image.includes(",") ? base64Image.split(",")[1] : base64Image;
@@ -32,34 +33,45 @@ async function analyzeArtWithGemini(base64Image, userPrompt) {
     3. Структура тексту (analysis_text) має містити: Загальне враження, Детальний аналіз та Поради щодо покращення.
 
     **OUTPUT FORMAT (CRITICAL):**
-   л Ви ПОВИННІ повернути відповідь ВИКЛЮЧНО у форматі JSON без маркерів Markdown. Не маюйте зображення! Замість цього поверніть координати для ліній та точок, які фронтенд намалює поверх оригінального фото.
+    Ви ПОВИННІ повернути відповідь ВИКЛЮЧНО у форматі JSON без маркерів Markdown. Не маюйте зображення! Замість цього поверніть координати для ліній та точок, які фронтенд намалює поверх оригінального фото.
     Усі координати (x, y) - це відсотки від розміру зображення (від 0 до 100).
 
     СТРУКТУРА JSON ОБОВ'ЯЗКОВО ТАКА:
     {
-      "analysis_text": "string (ваш детальний текстовий аналіз у форматі Markdown)",
-      "lines": [
-        {
-          "x1": 50, "y1": 10, "x2": 50, "y2": 90, 
-          "color": "red"
-        }
-      ],
-      "annotations": [
-        {
-          "text": "Короткий текст помилки (наприклад, 'Очі зависоко')",
-          "text_x": 80, "text_y": 40,
-          "pointer_x": 50, "pointer_y": 35
-        }
-      ]
+      "analysis_text": "## Загальне враження\\n...\\n## Детальний аналіз\\n...\\n## Поради щодо покращення\\n...",
+  "lines": [
+    {
+      "x1": 50, "y1": 10, "x2": 50, "y2": 90,
+      "color": "rgba(255,0,0,0.7)",
+      "label": "Вісь симетрії"
     }
-    `;
+  ],
+  "rectangles": [
+    {
+      "x": 20, "y": 15, "width": 60, "height": 30,
+      "color": "rgba(255,165,0,0.5)",
+      "label": "Зона голови"
+    }
+  ],
+  "annotations": [
+    {
+      "text": "Короткий текст (наприклад: Очі зависоко)",
+      "pointer_x": 50, "pointer_y": 35
+    }
+  ]
+}
+`;
 
     try {
         const result = await model.generateContent([systemPrompt, imagePart]);
         const responseText = await result.response.text();
 
         // Очищаємо відповідь від випадкових маркерів Markdown, які іноді додає ШІ
-        const cleanJsonString = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+        const cleanJsonString = responseText
+            .replace(/```json/g, "")
+            .replace(/```/g, "")
+            .trim();
+
         return JSON.parse(cleanJsonString);
     } catch (error) {
         console.error("Gemini Node.js Error:", error.message);
