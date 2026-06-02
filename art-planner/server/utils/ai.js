@@ -1,11 +1,13 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY, {
+    apiEndpoint: "https://generativelanguage.googleapis.com"
+});
 async function analyzeArtWithGemini(base64Image, userPrompt) {
 
     const model = genAI.getGenerativeModel({
-        model: "gemini-3.1-flash-lite"
+        model: "gemini-3.5-flash"
+
     });
 
     const base64Data = base64Image.includes(",") ? base64Image.split(",")[1] : base64Image;
