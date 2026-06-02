@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/axiosConfig';
 
-
-const AuthPage = ({ onLogin }) => {
+const AuthPage = ({ onLogin, showToast }) => {
     const [isSignUp, setIsSignUp] = useState(true);
     const [formData, setFormData] = useState({ username: '', email: '', password: '' });
     const [error, setError] = useState('');
@@ -17,24 +16,24 @@ const AuthPage = ({ onLogin }) => {
             const endpoint = isSignUp ? '/register' : '/login';
             const response = await API.post(endpoint, formData);
 
-            if (!isSignUp || endpoint === '/login') {
-                // Зберігаємо userId для ШІ-інструктора та розрахунку прогресу
+            if (!isSignUp) {
                 localStorage.setItem('token', response.data.token);
                 localStorage.setItem('userId', response.data.userId);
                 localStorage.setItem('username', response.data.username);
-                if (onLogin) {
-                    onLogin();
-                }
+                if (onLogin) onLogin();
+                showToast?.("Вітаємо! Вхід успішний 🎨", 'success');
                 navigate('/planner');
             } else {
                 setIsSignUp(false);
-                alert('Реєстрація успішна! Тепер увійдіть у свій акаунт.');
+                showToast?.('Реєстрація успішна! Тепер увійдіть у свій акаунт.', 'success');
             }
         } catch (err) {
-            // Обробка помилки 500 (сервер) або 401 (пароль)
-            const message = err.response?.data?.message || err.message || "Помилка з'єднання з сервером";
+            const message = err.response?.data?.message
+                || err.response?.data?.error
+                || err.message
+                || "Помилка з'єднання з сервером";
             setError(message);
-            alert("Auth error: " + message);
+            showToast?.("Помилка: " + message, 'error');
         }
     };
 
@@ -95,7 +94,7 @@ const AuthPage = ({ onLogin }) => {
                                     required
                                     className="w-full bg-white/50 border-2 border-dark rounded-2xl h-14 px-5 outline-none text-lg focus:ring-2 ring-accent"
                                     placeholder="Enter your name"
-                                    onChange={(e) => setFormData({...formData, username: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                 />
                             </div>
                         )}
@@ -107,7 +106,7 @@ const AuthPage = ({ onLogin }) => {
                                 required
                                 className="w-full bg-white/50 border-2 border-dark rounded-2xl h-14 px-5 outline-none text-lg focus:ring-2 ring-accent"
                                 placeholder="example@art.com"
-                                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             />
                         </div>
 
@@ -118,7 +117,7 @@ const AuthPage = ({ onLogin }) => {
                                 required
                                 className="w-full bg-white/50 border-2 border-dark rounded-2xl h-14 px-5 outline-none text-lg focus:ring-2 ring-accent"
                                 placeholder="••••••••"
-                                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             />
                         </div>
 

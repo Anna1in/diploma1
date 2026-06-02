@@ -1,0 +1,43 @@
+services:
+  # Бекенд (Node.js / Express)
+  server:
+    build: ./server
+    container_name: diploma-backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - server/.env
+    volumes:
+      - ./server/uploads:/app/uploads
+      - ./server/results:/app/results
+    depends_on:
+      - mongodb
+
+  # База даних MongoDB
+  mongodb:
+    image: mongo:6.0
+    container_name: diploma-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  # ФРОНТЕНД (React / Vite)
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: diploma-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+    depends_on:
+      - server
+
+volumes:
+  mongo-data:

@@ -1,0 +1,16 @@
+
+**/node_modules/
+server/node_modules
+client/node_modules
+node_modules/
+
+**/dist/
+**/build/
+.production
+
+server/uploads/*
+server/results/*
+*.log
+.git/
+.idea/
+.vscode/
